@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JavaScriptLibraryMappings">
+    <file url="PROJECT" libraries="{Assets, HavokPhysics_umd, Oimo, ammo, babylon, babylon.gui, babylon.inspector.bundle, babylonjs.addons, babylonjs.loaders, babylonjs.materials, babylonjs.postProcess, babylonjs.proceduralTextures, babylonjs.serializers, cannon, dat-gui, earcut, recast}" />
+  </component>
+</project>
