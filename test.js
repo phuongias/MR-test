@@ -15,7 +15,7 @@ window.addEventListener("DOMContentLoaded", async function () {
                 sessionMode: "immersive-ar",
                 referenceSpaceType: "local-floor"
             },
-            optionalFeatures: true
+            optionalFeatures: ["plane-detection", "world-tracking"]
         });
 
         const fm = xr.baseExperience.featuresManager;
