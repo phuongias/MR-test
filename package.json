@@ -13,6 +13,9 @@
   "private": true,
   "dependencies": {
     "babylonjs": "^7.53.0",
+    "babylonjs-gui": "^7.53.0",
+    "babylonjs-loaders": "^7.53.0",
+    "babylonjs-materials": "^7.53.0",
     "three": "^0.174.0"
   }
 }

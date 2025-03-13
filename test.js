@@ -1,9 +1,18 @@
 import * as BABYLON from "babylonjs";
+import "babylonjs-loaders";
+import "babylonjs-materials";
+import "babylonjs-gui";
+
+
+// Wähle das Canvas-Element aus
+const canvas = document.getElementById("renderCanvas");
+
+// Erstelle eine Babylon.js Engine
+const engine = new BABYLON.Engine(canvas, true);
 
 
 const createScene = async function () {
     let isInRealWorld;
-    const canvas = document.getElementById("renderCanvas");
 
     // Creates a basic Babylon Scene object (non-mesh)
     const scene = new BABYLON.Scene(engine);
@@ -20,11 +29,11 @@ const createScene = async function () {
     // AR availability check and GUI in non-AR mode
     const arAvailable = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
 
-    const advancedTexture = BABYLON.GUID.AdvancedDynamicTexture.CreateFullscreenUI(
+    const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI(
         "FullscreenUI"
     );
 
-    const rectangle = new BABYLON.GUID.Rectangle("rect");
+    const rectangle = new BABYLON.GUI.Rectangle("rect");
     rectangle.background = "black";
     rectangle.color = "blue";
     rectangle.width = "80%";
