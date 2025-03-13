@@ -13,6 +13,7 @@ var scene = null;
 var sceneToRender = null;
 var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
 
+
 const createScene = async function () {
 
     // Creates a basic Babylon Scene object (non-mesh)
