@@ -1,18 +1,19 @@
-import * as BABYLON from "babylonjs";
-import "babylonjs-loaders";
-import "babylonjs-materials";
-import "babylonjs-gui";
+var canvas = document.getElementById("renderCanvas");
 
+var startRenderLoop = function (engine, canvas) {
+    engine.runRenderLoop(function () {
+        if (sceneToRender && sceneToRender.activeCamera) {
+            sceneToRender.render();
+        }
+    });
+}
 
-// Wähle das Canvas-Element aus
-const canvas = document.getElementById("renderCanvas");
-
-// Erstelle eine Babylon.js Engine
-const engine = new BABYLON.Engine(canvas, true);
-
+var engine = null;
+var scene = null;
+var sceneToRender = null;
+var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
 
 const createScene = async function () {
-    let isInRealWorld;
 
     // Creates a basic Babylon Scene object (non-mesh)
     const scene = new BABYLON.Scene(engine);
@@ -43,7 +44,7 @@ const createScene = async function () {
     const nonXRPanel = new BABYLON.GUI.StackPanel();
     rectangle.addControl(nonXRPanel);
 
-    const text1 = new BABYLON.GUID.TextBlock("text1");
+    const text1 = new BABYLON.GUI.TextBlock("text1");
     text1.fontFamily = "Helvetica";
     text1.textWrapping = true;
     text1.color = "white";
@@ -291,10 +292,7 @@ const createScene = async function () {
             });
 
         }
-
     }
-
-
 
     //Hide GUI in AR mode
     xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
@@ -342,3 +340,33 @@ const createScene = async function () {
     return scene;
 
 };
+window.initFunction = async function() {
+
+
+
+    var asyncEngineCreation = async function() {
+        try {
+            return createDefaultEngine();
+        } catch(e) {
+            console.log("the available createEngine function failed. Creating the default engine instead");
+            return createDefaultEngine();
+        }
+    }
+
+    window.engine = await asyncEngineCreation();
+
+    const engineOptions = window.engine.getCreationOptions();
+    if (engineOptions.audioEngine !== false) {
+
+    }
+    if (!engine) throw 'engine should not be null.';
+    startRenderLoop(engine, canvas);
+    window.scene = createScene();};
+initFunction().then(() => {scene.then(returnedScene => { sceneToRender = returnedScene; });
+
+});
+
+// Resize
+window.addEventListener("resize", function () {
+    engine.resize();
+});
