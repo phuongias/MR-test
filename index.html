@@ -1,54 +1,157 @@
-<!doctype html>
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>AR Rechteck mit Rotation und Skalierung</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+<script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.125.0/build/three.module.js';
+    import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.125.0/examples/jsm/webxr/ARButton.js';
 
-        <title>Babylon.js sample code</title>
+    class App {
+        constructor() {
+            const container = document.createElement('div');
+            document.body.appendChild(container);
 
-        <!-- Babylon.js -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
-        <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
-        <script src="https://cdn.babylonjs.com/recast.js"></script>
-        <script src="https://cdn.babylonjs.com/ammo.js"></script>
-        <script src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
-        <script src="https://cdn.babylonjs.com/cannon.js"></script>
-        <script src="https://cdn.babylonjs.com/Oimo.js"></script>
-        <script src="https://cdn.babylonjs.com/earcut.min.js"></script>
-        <script src="https://cdn.babylonjs.com/babylon.js"></script>
-        <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
-        <script src="https://cdn.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
-        <script src="https://cdn.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
-        <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
-        <script src="https://cdn.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
-        <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-        <script src="https://cdn.babylonjs.com/addons/babylonjs.addons.min.js"></script>
-        <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
-        <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
-        <script src="test.js"></script>
+            this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+            this.scene = new THREE.Scene();
 
-        <style>
-            html,
-            body {
-                overflow: hidden;
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
+            const ambient = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            this.scene.add(ambient);
+
+            this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.xr.enabled = true;
+            container.appendChild(this.renderer.domElement);
+
+            document.body.appendChild(ARButton.createButton(this.renderer, { requiredFeatures: ['hit-test'] }));
+
+            this.reticle = new THREE.Mesh(
+                new THREE.RingBufferGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+                new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+            );
+            this.reticle.matrixAutoUpdate = false;
+            this.reticle.visible = false;
+            this.scene.add(this.reticle);
+
+            this.setupXR();
+            this.createRectangle();
+            this.state = 0; // 0: Platzieren, 1: Rotieren, 2: Skalieren
+            this.renderer.setAnimationLoop(this.render.bind(this));
+        }
+
+        setupXR() {
+            this.hitTestSourceRequested = false;
+            this.hitTestSource = null;
+
+            this.controller = this.renderer.xr.getController(0);
+            this.controller.addEventListener('select', this.onSelect.bind(this));
+            this.controller.addEventListener('squeezestart', this.onSqueeze.bind(this));
+            this.scene.add(this.controller);
+        }
+
+        createRectangle() {
+            const geometry = new THREE.PlaneGeometry(0.4, 0.2);
+            const material = new THREE.MeshStandardMaterial({ color: 0x0000ff, side: THREE.DoubleSide });
+            this.rectangle = new THREE.Mesh(geometry, material);
+            this.rectangle.visible = false;
+            this.scene.add(this.rectangle);
+        }
+
+        onSqueeze() {
+            if ( this.state != 0 ) {
+                this.state -= 1;
+            }
+            if ( this.state === 0 ) {
+                this.rectangle.visible = false;
+            }
+        }
+
+        onSelect() {
+            if (this.state === 0) { // Platzierung
+                this.rectangle.position.setFromMatrixPosition(this.reticle.matrix);
+                //this.rectangle.rotation.setFromMatrixPosition(this.reticle.matrix);
+                //this.rectangle.scale.setFromMatrixPosition(this.reticle.matrix);
+                this.rectangle.visible = true;
+                this.state = 1;
+            } else if (this.state === 1) { // Rotation
+                this.state = 2;
+            } else if (this.state === 2) { // Höhe
+                this.state = 3;
+            } else if (this.state === 3) { // Größe
+                this.state = 4;
+            }
+        }
+
+        requestHitTestSource() {
+            const session = this.renderer.xr.getSession();
+            session.requestReferenceSpace('viewer').then(refSpace => {
+                session.requestHitTestSource({ space: refSpace }).then(source => {
+                    this.hitTestSource = source;
+                });
+            });
+            session.addEventListener('end', () => {
+                this.hitTestSourceRequested = false;
+                this.hitTestSource = null;
+            });
+            this.hitTestSourceRequested = true;
+        }
+
+        getHitTestResults(frame) {
+            const hitTestResults = frame.getHitTestResults(this.hitTestSource);
+            if (hitTestResults.length) {
+                const referenceSpace = this.renderer.xr.getReferenceSpace();
+                const pose = hitTestResults[0].getPose(referenceSpace);
+                this.reticle.visible = true;
+                this.reticle.matrix.fromArray(pose.transform.matrix);
+            } else {
+                this.reticle.visible = false;
+            }
+        }
+
+        onButtonPress(gamepad) {
+
+        }
+
+        render(timestamp, frame) {
+            if (frame) {
+                if (!this.hitTestSourceRequested) this.requestHitTestSource();
+                if (this.hitTestSource) this.getHitTestResults(frame);
             }
 
-            #renderCanvas {
-                width: 100%;
-                height: 100%;
-                touch-action: none;
+            const session = this.renderer.xr.getSession();
+            if (session) {
+                for (const inputSource of session.inputSources) {
+                    if (inputSource.gamepad) {
+                        const gamepad = inputSource.gamepad;
+                        const xAxis = gamepad.axes[2]; // Daumenstick horizontal
+                        const yAxis = gamepad.axes[3]; // Daumenstick vertikal
+                        const bKnob = gamepad.buttons[5];
+                        const aKnob = gamepad.buttons[4];
+
+                        if (this.state === 1) { // Rotation
+                            this.rectangle.rotation.y += xAxis * 0.025;
+
+                        } else if (this.state === 2) { //Höhe Position
+                            this.rectangle.position.y += yAxis * 0.05;
+
+                        } else if (this.state === 3) { // Skalierung
+                            const scale = Math.max(0.1, this.rectangle.scale.x + yAxis * 0.02);
+                            this.rectangle.scale.set(scale, scale, scale);
+                        }
+                    }
+                }
             }
 
-            #canvasZone {
-                width: 100%;
-                height: 100%;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
-    </body>
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+
+    new App();
+</script>
+</body>
 </html>

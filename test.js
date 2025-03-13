@@ -1,87 +1,107 @@
-/**
- * WebXR Plane detection demo using Babylon JS
- *
- * This demo shows on to use Babylon's plane detection module to show polygons defined by the ar system.
- *
- * Anchors will be added when a room is being scanned and will persist color between updates.
- *
- * Created by Raanan Weber (@RaananW)
- */
-var createScene = async function() {
-    var scene = new BABYLON.Scene(engine);
-    var camera = new BABYLON.ArcRotateCamera("Camera", -Math.PI / 2, Math.PI / 2, 12, BABYLON.Vector3.Zero(), scene);
-    camera.attachControl(canvas, true);
+import * as THREE from 'three';
+import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.136/examples/jsm/webxr/ARButton.js';
 
-    // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+let camera, scene, renderer, controller;
+let hitTestSource = null;
+let hitTestSourceRequested = false;
+let reticle;
 
-    // Default intensity is 1. Let's dim the light a small amount
-    light.intensity = 0.7;
+function init() {
+    scene = new THREE.Scene();
 
-    var xr = await scene.createDefaultXRExperienceAsync({
-        uiOptions: {
-            sessionMode: "immersive-ar",
-            referenceSpaceType: "local-floor"
-        },
-        optionalFeatures: true
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    // AR-Button erstellen und in den Container einfügen
+    const arButton = ARButton.createButton(renderer, {
+        requiredFeatures: ['hit-test', 'plane-detection']
     });
 
-    const fm = xr.baseExperience.featuresManager;
+    // AR-Button zu 'ar-button-container' hinzufügen
+    document.getElementById('ar-button-container').appendChild(arButton);
 
-    const xrPlanes = fm.enableFeature(BABYLON.WebXRPlaneDetector.Name, "latest");
+    // Einfaches Licht hinzufügen
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 2);
+    scene.add(light);
 
-    const planes = [];
+    // Reticle zur Visualisierung der Hit-Test-Ergebnisse
+    reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    );
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
 
-    xrPlanes.onPlaneAddedObservable.add(plane => {
-        plane.polygonDefinition.push(plane.polygonDefinition[0]);
-        var polygon_triangulation = new BABYLON.PolygonMeshBuilder("name", plane.polygonDefinition.map((p) => new BABYLON.Vector2(p.x, p.z)), scene);
-        var polygon = polygon_triangulation.build(false, 0.01);
-        plane.mesh = polygon;
-        planes[plane.id] = (plane.mesh);
-        const mat = new BABYLON.StandardMaterial("mat", scene);
-        mat.alpha = 0.5;
-        // pick a random color
-        mat.diffuseColor = BABYLON.Color3.Random();
-        polygon.createNormals();
-        plane.mesh.material = mat;
+    // Controller aus der AR-Session holen und Eventlistener hinzufügen
+    controller = renderer.xr.getController(0);
+    controller.addEventListener('select', onSelect);
+    scene.add(controller);
 
-        plane.mesh.rotationQuaternion = new BABYLON.Quaternion();
-        plane.transformationMatrix.decompose(plane.mesh.scaling, plane.mesh.rotationQuaternion, plane.mesh.position);
+    // Fenstergrößenanpassung behandeln
+    window.addEventListener('resize', onWindowResize, false);
+
+    renderer.setAnimationLoop(render);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function onSelect() {
+    if (reticle.visible) {
+        // Hier kann später der Code ergänzt werden, um ein Objekt an der Reticle-Position zu platzieren
+        console.log("Object placed at reticle position");
+    }
+}
+
+function requestHitTestSource(session) {
+    session.requestReferenceSpace('viewer').then(referenceSpace => {
+        session.requestHitTestSource({ space: referenceSpace }).then(source => {
+            hitTestSource = source;
+        }).catch(err => {
+            console.error('Error requesting hit test source: ', err);
+        });
+    }).catch(err => {
+        console.error('Error requesting reference space: ', err);
     });
 
-    xrPlanes.onPlaneUpdatedObservable.add(plane => {
-        let mat;
-        if (plane.mesh) {
-            // keep the material, dispose the old polygon
-            mat = plane.mesh.material;
-            plane.mesh.dispose(false, false);
-        }
-        const some = plane.polygonDefinition.some(p => !p);
-        if (some) {
-            return;
-        }
-        plane.polygonDefinition.push(plane.polygonDefinition[0]);
-        var polygon_triangulation = new BABYLON.PolygonMeshBuilder("name", plane.polygonDefinition.map((p) => new BABYLON.Vector2(p.x, p.z)), scene);
-        var polygon = polygon_triangulation.build(false, 0.01);
-        polygon.createNormals();
-        plane.mesh = polygon;
-        planes[plane.id] = (plane.mesh);
-        plane.mesh.material = mat;
-        plane.mesh.rotationQuaternion = new BABYLON.Quaternion();
-        plane.transformationMatrix.decompose(plane.mesh.scaling, plane.mesh.rotationQuaternion, plane.mesh.position);
-    })
-
-    xrPlanes.onPlaneRemovedObservable.add(plane => {
-        if (plane && planes[plane.id]) {
-            planes[plane.id].dispose()
-        }
-    })
-
-    xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
-        planes.forEach(plane => plane.dispose());
-        while (planes.pop()) { };
+    session.addEventListener('end', () => {
+        hitTestSourceRequested = false;
+        hitTestSource = null;
     });
+    hitTestSourceRequested = true;
+}
 
+function render(timestamp, frame) {
+    if (frame) {
+        const session = renderer.xr.getSession();
+        if (!hitTestSourceRequested) {
+            requestHitTestSource(session);
+        }
+        if (hitTestSource) {
+            const hitTestResults = frame.getHitTestResults(hitTestSource);
+            if (hitTestResults.length) {
+                const referenceSpace = renderer.xr.getReferenceSpace();
+                const pose = hitTestResults[0].getPose(referenceSpace);
+                if (pose) {
+                    reticle.visible = true;
+                    reticle.matrix.fromArray(pose.transform.matrix);
+                } else {
+                    reticle.visible = false;
+                }
+            } else {
+                reticle.visible = false;
+            }
+        }
+    }
+    renderer.render(scene, camera);
+}
 
-    return scene;
-};
+window.addEventListener('load', init);
