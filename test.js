@@ -291,7 +291,10 @@ const createScene = async function () {
             });
 
         }
+        
     }
+
+
 
     //Hide GUI in AR mode
     xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
