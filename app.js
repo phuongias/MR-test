@@ -12,7 +12,18 @@ var engine = null;
 var scene = null;
 var sceneToRender = null;
 var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
-
+/***************************************************
+ * WebXR Portal demo
+ * ************************************************
+ *
+ * Working (at the moment) on android devices and the latest chrome and (Google VR Services installed) and Meta Quest 3
+ *
+ *
+ * - Once in AR, look at the floor or at a flat surface for a few seconds (and move a little): the hit-testing ring will appear.
+ * - Then, is the ring is displayed, the first press on the screen will add a portal at the position of the ring
+ * - then walk to the portal and cross it to be in the virtual world.
+ *
+ */
 
 const createScene = async function () {
 
