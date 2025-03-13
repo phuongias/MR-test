@@ -1,7 +1,9 @@
-import * as BABYLON from "three";
-import 'three';
+import * as BABYLON from "babylonjs";
+
 
 const createScene = async function () {
+    let isInRealWorld;
+    const canvas = document.getElementById("renderCanvas");
 
     // Creates a basic Babylon Scene object (non-mesh)
     const scene = new BABYLON.Scene(engine);
@@ -18,11 +20,11 @@ const createScene = async function () {
     // AR availability check and GUI in non-AR mode
     const arAvailable = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
 
-    const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI(
+    const advancedTexture = BABYLON.GUID.AdvancedDynamicTexture.CreateFullscreenUI(
         "FullscreenUI"
     );
 
-    const rectangle = new BABYLON.GUI.Rectangle("rect");
+    const rectangle = new BABYLON.GUID.Rectangle("rect");
     rectangle.background = "black";
     rectangle.color = "blue";
     rectangle.width = "80%";
@@ -32,7 +34,7 @@ const createScene = async function () {
     const nonXRPanel = new BABYLON.GUI.StackPanel();
     rectangle.addControl(nonXRPanel);
 
-    const text1 = new BABYLON.GUI.TextBlock("text1");
+    const text1 = new BABYLON.GUID.TextBlock("text1");
     text1.fontFamily = "Helvetica";
     text1.textWrapping = true;
     text1.color = "white";
