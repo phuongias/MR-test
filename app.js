@@ -11,7 +11,9 @@ var startRenderLoop = function (engine, canvas) {
 var engine = null;
 var scene = null;
 var sceneToRender = null;
-var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+var createDefaultEngine = function () {
+    return new BABYLON.Engine(canvas, true, {preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false});
+};
 /***************************************************
  * WebXR Portal demo
  * ************************************************
@@ -26,10 +28,8 @@ var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, {
  */
 
 const createScene = async function () {
-
     // Creates a basic Babylon Scene object (non-mesh)
     const scene = new BABYLON.Scene(engine);
-
     // Creates and positions a free camera (non-mesh)
     const camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 1, -5), scene);
 
@@ -76,10 +76,12 @@ const createScene = async function () {
 
     // Create the WebXR Experience Helper for an AR Session (it initializes the XR scene, creates an XR Camera,
     // initialize the features manager, create an HTML UI button to enter XR,...)
+    //WEBXR setup
     const xr = await scene.createDefaultXRExperienceAsync({
         uiOptions: {
             sessionMode: "immersive-ar",
             referenceSpaceType: "local-floor",
+            optionalFeatures: true,
             onError: (error) => {
                 alert(error);
             }
@@ -87,53 +89,58 @@ const createScene = async function () {
         optionalFeatures: true
     });
 
-    // XR Input Handling für die Controller
-    xr.input.onControllerAddedObservable.add((controller) => {
-        const motionController = controller.motionController;
-        if (motionController) {
-            const squeezeButton = motionController.getComponent("xr-squeeze");
 
+    // Portal scaling variables
+    let isScaling = false;
+    let initialDistance = 0;
+    let initialScale = new BABYLON.Vector3(1, 1, 1);
+
+// Deklaration hinzufügen
+    const rootPilar = new BABYLON.TransformNode("rootPilar", scene);
+    rootPilar.rotationQuaternion = new BABYLON.Quaternion();
+    rootPilar.scaling = new BABYLON.Vector3(1, 1, 1);
+
+    // Controller handling
+    const controllers = [];
+    xr.input.onControllerAddedObservable.add((controller) => {
+        controllers.push(controller);
+        controller.onMotionControllerInitObservable.add((motionController) => {
+            const squeezeButton = motionController.getComponent("xr-squeeze");
             if (squeezeButton) {
-                squeezeButton.onButtonStateChangedObservable.add(() => {
-                    if (squeezeButton.pressed) {
-                        // Speichert die ursprüngliche Position
-                        rootPilar.metadata = { grabbed: true, controller };
+                squeezeButton.onButtonStateChangedObservable.add((state) => {
+                    if (state.pressed) {
+                        if (controllers.filter(c => c.motionController?.getComponent("xr-squeeze")?.pressed).length === 2) {
+                            // Start scaling
+                            isScaling = true;
+                            initialDistance = BABYLON.Vector3.Distance(
+                                controllers[0].pointer.position,
+                                controllers[1].pointer.position
+                            );
+                            initialScale.copyFrom(rootPilar.scaling);
+                        }
                     } else {
-                        rootPilar.metadata = { grabbed: false };
+                        // Stop scaling
+                        isScaling = false;
                     }
                 });
             }
-        }
+        });
     });
 
-    // Szene aktualisieren, um Portal zu bewegen
+    // Scaling logic
     scene.onBeforeRenderObservable.add(() => {
-        if (rootPilar.metadata?.grabbed && rootPilar.metadata.controller) {
-            rootPilar.position.copyFrom(rootPilar.metadata.controller.pointer.position);
-        }
-    });
-
-    let lastDistance = null;
-    scene.onBeforeRenderObservable.add(() => {
-        const controllers = xrHelper.input.controllers;
-
-        if (controllers.length >= 2) {
-            const [c1, c2] = controllers;
+        if (isScaling && controllers.length >= 2) {
             const currentDistance = BABYLON.Vector3.Distance(
-                c1.pointer.position,
-                c2.pointer.position
+                controllers[0].pointer.position,
+                controllers[1].pointer.position
             );
 
-            if (lastDistance !== null) {
-                let scaleFactor = currentDistance / lastDistance;
-                rootPilar.scaling.scaleInPlace(scaleFactor);
-            }
-            lastDistance = currentDistance;
-        } else {
-            lastDistance = null;
+            const scaleFactor = currentDistance / initialDistance;
+            rootPilar.scaling.x = initialScale.x * scaleFactor;
+            rootPilar.scaling.y = initialScale.y * scaleFactor;
+            rootPilar.scaling.z = initialScale.z * scaleFactor;
         }
     });
-
 
 
     //Get the Feature Manager and from it the HitTesting fearture and the xrcamera
@@ -153,7 +160,7 @@ const createScene = async function () {
     neonMaterial.emissiveColor = new BABYLON.Color3(0.35, 0.96, 0.88)
 
     //Create a marker that will be used to represent the hitTest position
-    const marker = BABYLON.MeshBuilder.CreateTorus('marker', { diameter: 0.15, thickness: 0.05, tessellation: 32 });
+    const marker = BABYLON.MeshBuilder.CreateTorus('marker', {diameter: 0.15, thickness: 0.05, tessellation: 32});
     marker.isVisible = false;
     marker.rotationQuaternion = new BABYLON.Quaternion();
     gl.addIncludedOnlyMesh(marker);
@@ -172,18 +179,18 @@ const createScene = async function () {
         }
     });
 
-    //Set-up root Transform nodes
+    // Set-up root Transform nodes (HIER DIE KORREKTUR VORNEHMEN)
     const rootOccluder = new BABYLON.TransformNode("rootOccluder", scene);
     rootOccluder.rotationQuaternion = new BABYLON.Quaternion();
     const rootScene = new BABYLON.TransformNode("rootScene", scene);
     rootScene.rotationQuaternion = new BABYLON.Quaternion();
-    const rootPilar = new BABYLON.TransformNode("rootPilar", scene);
+    // HIER DIE ZWEITE DEKLARATION ENTFERNEN UND NUR ROTATION SETZEN
     rootPilar.rotationQuaternion = new BABYLON.Quaternion();
 
     //Create Occulers which will hide the 3D scene
     const oclVisibility = 0.001;
-    const ground = BABYLON.MeshBuilder.CreateBox("ground", { width: 500, depth: 500, height: 0.001 }, scene); // size should be big enough to hideall you want
-    const hole = BABYLON.MeshBuilder.CreateBox("hole", { size: 2, width: 1, height: 0.01 }, scene);
+    const ground = BABYLON.MeshBuilder.CreateBox("ground", {width: 500, depth: 500, height: 0.001}, scene); // size should be big enough to hideall you want
+    const hole = BABYLON.MeshBuilder.CreateBox("hole", {size: 2, width: 1, height: 0.01}, scene);
 
     const groundCSG = BABYLON.CSG.FromMesh(ground);
     const holeCSG = BABYLON.CSG.FromMesh(hole);
@@ -194,11 +201,11 @@ const createScene = async function () {
     //Create thee reverse occluder - to see the real world  through the portal when inside the 3D scene
     const occluderR = booleanRCSG.toMesh("occluderR", null, scene);
     //Create an occluder box to hide the 3D scene around the user when in real world
-    const occluderFloor = BABYLON.MeshBuilder.CreateBox("ground", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderback = BABYLON.MeshBuilder.CreateBox("occluderback", { width: 7, depth: 7, height: 0.001 }, scene);
+    const occluderFloor = BABYLON.MeshBuilder.CreateBox("ground", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderback = BABYLON.MeshBuilder.CreateBox("occluderback", {width: 7, depth: 7, height: 0.001}, scene);
     const occluderMaterial = new BABYLON.StandardMaterial("om", scene);
     occluderMaterial.disableLighting = true; // We don't need anything but the position information
     occluderMaterial.forceDepthWrite = true; //Ensure depth information is written to the buffer so meshes further away will not be drawn
@@ -309,9 +316,9 @@ const createScene = async function () {
             occluderLeft.translate(BABYLON.Axis.X, 3.5);
 
             //Add mesh for portal
-            const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", { height: 2, width: .1, depth: .1 });
-            const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", { height: 2, width: .1, depth: .1 });
-            const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", { height: 1.1, width: .1, depth: .1 });
+            const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", {height: 2, width: .1, depth: .1});
+            const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", {height: 2, width: .1, depth: .1});
+            const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", {height: 1.1, width: .1, depth: .1});
 
             //Move pilars to make a portal
             pilar2.translate(BABYLON.Axis.X, 1, BABYLON.Space.LOCAL);
@@ -381,8 +388,7 @@ const createScene = async function () {
                 occluderLeft.isVisible = false;
                 occluderback.isVisible = false;
 
-            }
-            else {
+            } else {
                 isInRealWorld = true;
                 occluder.isVisible = true;
                 occluderR.isVisible = false;
@@ -400,14 +406,14 @@ const createScene = async function () {
     return scene;
 
 };
-window.initFunction = async function() {
 
 
+window.initFunction = async function () {
 
-    var asyncEngineCreation = async function() {
+    var asyncEngineCreation = async function () {
         try {
             return createDefaultEngine();
-        } catch(e) {
+        } catch (e) {
             console.log("the available createEngine function failed. Creating the default engine instead");
             return createDefaultEngine();
         }
@@ -421,8 +427,12 @@ window.initFunction = async function() {
     }
     if (!engine) throw 'engine should not be null.';
     startRenderLoop(engine, canvas);
-    window.scene = createScene();};
-initFunction().then(() => {scene.then(returnedScene => { sceneToRender = returnedScene; });
+    window.scene = createScene();
+};
+initFunction().then(() => {
+    scene.then(returnedScene => {
+        sceneToRender = returnedScene;
+    });
 
 });
 
