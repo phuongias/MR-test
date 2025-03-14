@@ -87,6 +87,54 @@ const createScene = async function () {
         optionalFeatures: true
     });
 
+    // XR Input Handling für die Controller
+    xr.input.onControllerAddedObservable.add((controller) => {
+        const motionController = controller.motionController;
+        if (motionController) {
+            const squeezeButton = motionController.getComponent("xr-squeeze");
+
+            if (squeezeButton) {
+                squeezeButton.onButtonStateChangedObservable.add(() => {
+                    if (squeezeButton.pressed) {
+                        // Speichert die ursprüngliche Position
+                        rootPilar.metadata = { grabbed: true, controller };
+                    } else {
+                        rootPilar.metadata = { grabbed: false };
+                    }
+                });
+            }
+        }
+    });
+
+    // Szene aktualisieren, um Portal zu bewegen
+    scene.onBeforeRenderObservable.add(() => {
+        if (rootPilar.metadata?.grabbed && rootPilar.metadata.controller) {
+            rootPilar.position.copyFrom(rootPilar.metadata.controller.pointer.position);
+        }
+    });
+
+    let lastDistance = null;
+    scene.onBeforeRenderObservable.add(() => {
+        const controllers = xrHelper.input.controllers;
+
+        if (controllers.length >= 2) {
+            const [c1, c2] = controllers;
+            const currentDistance = BABYLON.Vector3.Distance(
+                c1.pointer.position,
+                c2.pointer.position
+            );
+
+            if (lastDistance !== null) {
+                let scaleFactor = currentDistance / lastDistance;
+                rootPilar.scaling.scaleInPlace(scaleFactor);
+            }
+            lastDistance = currentDistance;
+        } else {
+            lastDistance = null;
+        }
+    });
+
+
 
     //Get the Feature Manager and from it the HitTesting fearture and the xrcamera
     const fm = xr.baseExperience.featuresManager;
