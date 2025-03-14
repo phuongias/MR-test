@@ -217,106 +217,63 @@ const createScene = async function () {
 
     let portalAppearded = false;
     let portalPosition = new BABYLON.Vector3();
-
-    scene.onPointerDown = (evt, pickInfo) => {
-
-        if (hitTest && xr.baseExperience.state === BABYLON.WebXRState.IN_XR && !portalAppearded) {
-
-            portalAppearded = true;
-
-            //Enable the virtual world and move it to the hitTest position
-            rootScene.setEnabled(true);
-            rootOccluder.setEnabled(true);
-
-            hitTest.transformationMatrix.decompose(undefined, undefined, portalPosition);
-
-            rootOccluder.position = portalPosition;
-            rootScene.position = portalPosition;
-
-            //Move virtual scene 1 unit lower (this HillValley scene is at 1 above origin - and the grass at 1.2)
-            rootScene.translate(BABYLON.Axis.Y, -1);
-
-            //Positionate in front the car
-            rootScene.translate(BABYLON.Axis.X, 29);
-            rootScene.translate(BABYLON.Axis.Z, -11);
+    let portalState = 0; // 0: Platzierung, 1: Skalierung
+    let currentScale = 1;
+    const scaleSpeed = 0.02;
 
 
-            //Align occluders
-            rootOccluder.translate(BABYLON.Axis.Y, 3);
-            rootOccluder.rotationQuaternion = BABYLON.Quaternion.RotationAxis(new BABYLON.Vector3(-1, 0, 0), Math.PI / 2);
-            rootOccluder.translate(BABYLON.Axis.Z, -2);
-            occluderFloor.rotationQuaternion = BABYLON.Quaternion.RotationAxis(new BABYLON.Vector3(-1, 0, 0), Math.PI / 2);
-            occluderFloor.translate(BABYLON.Axis.Y, 1);
-            occluderFloor.translate(BABYLON.Axis.Z, 3.5);
-            occluderTop.rotationQuaternion = BABYLON.Quaternion.RotationAxis(new BABYLON.Vector3(-1, 0, 0), Math.PI / 2);
-            occluderTop.translate(BABYLON.Axis.Y, -2);
-            occluderTop.translate(BABYLON.Axis.Z, 3.5);
-            occluderback.translate(BABYLON.Axis.Y, 7);
-            occluderback.translate(BABYLON.Axis.Z, 2);
-            occluderRight.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Z, Math.PI / 2);
-            occluderRight.translate(BABYLON.Axis.Y, -3.4);
-            occluderRight.translate(BABYLON.Axis.X, 3.5);
-            occluderLeft.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Z, Math.PI / 2);
-            occluderLeft.translate(BABYLON.Axis.Y, 3.4);
-            occluderLeft.translate(BABYLON.Axis.X, 3.5);
 
-            //Add mesh for portal
-            const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", { height: 2, width: .1, depth: .1 });
-            const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", { height: 2, width: .1, depth: .1 });
-            const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", { height: 1.1, width: .1, depth: .1 });
+    // Controller-Eingabe-Handling hinzufügen
+    xr.baseExperience.input.onControllerAddedObservable.add((controller) => {
+        controller.onMotionControllerInitObservable.add((motionController) => {
+            // Squeeze-Button für Modus-Reset
+            const squeezeComponent = motionController.getComponent("squeeze");
+            const triggerComponent = motionController.getComponent("trigger");
 
-            //Move pilars to make a portal
-            pilar2.translate(BABYLON.Axis.X, 1, BABYLON.Space.LOCAL);
-            pilar3.addRotation(0, 0, Math.PI / 2);
-            pilar3.translate(BABYLON.Axis.Y, 1, BABYLON.Space.LOCAL);
-            pilar3.translate(BABYLON.Axis.Y, -.5, BABYLON.Space.LOCAL);
+            if (squeezeComponent) {
+                squeezeComponent.onButtonStateChangedObservable.add((component) => {
+                    if (component.changes.pressed && portalState === 1) {
+                        portalState = 0;
+                        console.log("Skalierungsmodus deaktiviert");
+                    }
+                });
+            }
 
-            //Set-up transformnode to move portal mesh
-            pilar1.parent = rootPilar;
-            pilar2.parent = rootPilar;
-            pilar3.parent = rootPilar;
+            if (triggerComponent) {
+                triggerComponent.onButtonStateChangedObservable.add((component) => {
+                    if (component.changes.pressed && portalState === 0 && hitTest) {
+                        portalState = 1;
+                        console.log("Skalierungsmodus aktiviert");
+                    }
+                });
+            }
+        });
+    });
 
-            //move portal mesh to hitTest position
-            rootPilar.position = portalPosition;
-
-            //align portal mesh with occluder
-            rootPilar.translate(BABYLON.Axis.Y, 1);
-            rootPilar.translate(BABYLON.Axis.X, -.5);
-            rootPilar.translate(BABYLON.Axis.Z, .05);  //push it a bit in virtual world to have it rendered in realworld
-
-            //Add neon material and glowing effect to the portal
-            gl.addIncludedOnlyMesh(pilar1);
-            gl.addIncludedOnlyMesh(pilar2);
-            gl.addIncludedOnlyMesh(pilar3);
-            pilar1.material = neonMaterial;
-            pilar2.material = neonMaterial;
-            pilar3.material = neonMaterial;
-
-            //add particle effects to the portal
-            BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#488", scene, false).then(system => {
-                system.emitter = pilar3;
-            });
-            BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#489", scene, false).then(system => {
-                system.emitter = pilar1;
-            });
-            BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#489", scene, false).then(system => {
-                system.emitter = pilar2;
-            });
-
-        }
-    }
-
-    //Hide GUI in AR mode
-    xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
-        rectangle.isVisible = false;
-    })
-    xr.baseExperience.sessionManager.onXRSessionEnded.add(() => {
-        rectangle.isVisible = true;
-
-    })
-
-    //Rendering loop
+// Render-Loop für Skalierung hinzufügen
     scene.onBeforeRenderObservable.add(() => {
+        // Skalierung nur im aktiven Zustand
+        if (portalState === 1 && portalAppearded) {
+            xr.baseExperience.input.controllers.forEach((controller) => {
+                if (controller.inputSource.gamepad) {
+                    const gamepad = controller.inputSource.gamepad;
+                    const yAxis = gamepad.axes[3]; // Vertikale Achse des rechten Joysticks
+
+                    // Skalierung anpassen
+                    currentScale = BABYLON.Scalar.Clamp(
+                        currentScale + yAxis * scaleSpeed,
+                        0.5, // Minimale Skalierung
+                        3    // Maximale Skalierung
+                    );
+
+                    // Skalierung auf alle relevanten Elemente anwenden
+                    rootPilar.scaling.setAll(currentScale);
+                    rootOccluder.scaling.setAll(currentScale);
+                    rootScene.scaling.setAll(currentScale);
+                }
+            });
+        }
+        
 
         marker.isVisible = !portalAppearded;
 
