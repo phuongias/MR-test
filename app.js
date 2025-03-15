@@ -42,7 +42,6 @@ const createScene = async function () {
     const arAvailable = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
 
 
-
     //GUI erstellen -> über die die Szene
     const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI(
         "FullscreenUI"
@@ -248,7 +247,6 @@ const createScene = async function () {
     occluderback.visibility = oclVisibility;
 
 
-
     //Setzt das Auto-Clearing des Depth Stencils für die Rendering-Gruppen
     scene.setRenderingAutoClearDepthStencil(1, false, false, false); // Do not clean buffer info to ensure occlusion
     scene.setRenderingAutoClearDepthStencil(0, true, true, true); // Clean for 1rst frame
@@ -290,7 +288,6 @@ const createScene = async function () {
             rootScene.translate(BABYLON.Axis.Z, -11);
 
 
-
             //Align occluders
             rootOccluder.translate(BABYLON.Axis.Y, 3);
             rootOccluder.rotationQuaternion = BABYLON.Quaternion.RotationAxis(new BABYLON.Vector3(-1, 0, 0), Math.PI / 2);
@@ -315,7 +312,6 @@ const createScene = async function () {
             const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", {height: 2, width: .1, depth: .1});
             const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", {height: 2, width: .1, depth: .1});
             const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", {height: 1.1, width: .1, depth: .1});
-
 
 
             //verschiebt die Pfeiler / Rahmen um das Portal zu formen
@@ -364,6 +360,35 @@ const createScene = async function () {
 
         }
     }
+
+    /// Add this function to handle controller input
+    const handleControllerInput = (xrInput) => {
+        xrInput.onControllerAddedObservable.add((controller) => {
+            controller.onMotionControllerInitObservable.add((motionController) => {
+                const squeezeComponent = motionController.getComponentOfType("squeeze");
+
+                if (squeezeComponent) {
+                    squeezeComponent.onButtonStateChangedObservable.add(() => {
+                        if (squeezeComponent.changes.pressed) {
+                            if (squeezeComponent.pressed) {
+                                // Start scaling
+                                controller.onFrameObservable.add(() => {
+                                    const scaleFactor = 1 + (controller.grip.position.y * 0.01);
+                                    rootPilar.scaling = new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor);
+                                });
+                            } else {
+                                // Stop scaling
+                                controller.onFrameObservable.clear();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    };
+
+// Call this function after creating the XR experience
+    xr.baseExperience.input.onControllerAddedObservable.add(handleControllerInput);
 
 
     //GUI wird in AR Modus ausgeblendet
