@@ -376,49 +376,6 @@ const createScene = async function () {
 
     })
 
-    function scalePortal(amount) {
-        let scaleFactor = rootPilar.scaling.x + amount;  // Skaliert gleichmäßig in alle Richtungen
-        scaleFactor = Math.max(0.5, Math.min(2, scaleFactor)); // Begrenzung der Skalierung (zwischen 0.5x und 2x)
-        rootPilar.scaling.set(scaleFactor, scaleFactor, scaleFactor);
-    }
-
-
-    xr.baseExperience.sessionManager.onXRSessionInit.add(() => {
-        xr.input.onControllerAddedObservable.add(controller => {
-            if (controller.inputSource.handedness === "right") {
-                let rightController = controller;
-
-                // Grip gedrückt -> Portal vergrößern
-                rightController.onMotionControllerInitObservable.add(motionController => {
-                    let gripButton = motionController.getComponent("xr-standard-squeeze");
-                    if (gripButton) {
-                        gripButton.onButtonStateChangedObservable.add(component => {
-                            if (component.pressed) {
-                                scalePortal(0.1); // Erhöht Skalierung um 10%
-                            }
-                        });
-                    }
-                });
-            }
-
-            if (controller.inputSource.handedness === "left") {
-                let leftController = controller;
-
-                // Grip gedrückt -> Portal verkleinern
-                leftController.onMotionControllerInitObservable.add(motionController => {
-                    let gripButton = motionController.getComponent("xr-standard-squeeze");
-                    if (gripButton) {
-                        gripButton.onButtonStateChangedObservable.add(component => {
-                            if (component.pressed) {
-                                scalePortal(-0.1); // Verkleinert Skalierung um 10%
-                            }
-                        });
-                    }
-                });
-            }
-        });
-    });
-
 
     //HauptRendering LOop
     scene.onBeforeRenderObservable.add(() => {
