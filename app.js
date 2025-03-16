@@ -310,29 +310,27 @@ const createScene = async function () {
         // Update Occluder Visibility based on XR Camera vs. Portal Position
         // -----------------------------
         if (portalPosition && xrCamera) {
-            // Simple check based on Z position (you may want to adjust this for your scene)
-            if (xrCamera.position.z > portalPosition.z) {
-                // User is inside the virtual world: adjust occluders for proper occlusion
+            // 🔑 Verbesserte Sichtbarkeitslogik basierend auf Portalposition
+            const cameraToPortal = xrCamera.position.subtract(portalPosition);
+            const dotProduct = BABYLON.Vector3.Dot(cameraToPortal, BABYLON.Vector3.Forward());
+
+            if (dotProduct < 0) {
+                // Camera is behind the portal (inside virtual world)
                 occluder.isVisible = false;
                 occluderR.isVisible = true;
-                occluderFloor.isVisible = false;
-                occluderTop.isVisible = false;
-                occluderRight.isVisible = false;
-                occluderLeft.isVisible = false;
-                occluderback.isVisible = false;
-
+                rootScene.setEnabled(true); // 🔑 Sicherstellen, dass die Szene aktiv ist
             } else {
-                // User is in the real world: show occluders to hide the virtual world
+                // Camera is in front of the portal (real world)
                 occluder.isVisible = true;
                 occluderR.isVisible = false;
-                occluderFloor.isVisible = true;
-                occluderTop.isVisible = true;
-                occluderRight.isVisible = true;
-                occluderLeft.isVisible = true;
-                occluderback.isVisible = true;
-
-
             }
+
+            // Always hide additional occluders for clarity
+            occluderFloor.isVisible = false;
+            occluderTop.isVisible = false;
+            occluderRight.isVisible = false;
+            occluderLeft.isVisible = false;
+            occluderback.isVisible = false;
         }
     });
 
@@ -342,23 +340,27 @@ const createScene = async function () {
     function activatePortal() {
         portalAppeared = true;
         if (reticleMesh) {
-            reticleMesh.isVisible = false;  // Hide reticle after placement
+            reticleMesh.isVisible = false;
         }
-        // Enable the virtual world and occluders
+
+        // Enable virtual world and occluders
         rootScene.setEnabled(true);
         rootOccluder.setEnabled(true);
 
-        // Use the final reticle transform for portal placement
+        // Set portal position from reticle
         portalPosition.copyFrom(reticleMesh.position);
+
+        // Parent the VIRTUAL WORLD to the PORTAL TRANSFORM NODE
+        rootScene.parent = rootPilar; // 🔑 Wichtig: Virtuelle Szene ans Portal binden
+
+        // Apply portal transformations to rootPilar
         rootPilar.position.copyFrom(reticleMesh.position);
         rootPilar.rotation.copyFrom(reticleMesh.rotation);
         rootPilar.scaling.copyFrom(reticleMesh.scaling);
 
-
-        // Further adjust portal placement as needed (these values mimic original offsets)
-        rootPilar.translate(BABYLON.Axis.Y, 1);
-        rootPilar.translate(BABYLON.Axis.X, -0.5);
-        rootPilar.translate(BABYLON.Axis.Z, 0.05);  // Push slightly into the virtual world
+        // Adjust portal position offsets
+        rootPilar.translate(BABYLON.Axis.Y, 1, BABYLON.Space.WORLD);
+        rootPilar.translate(BABYLON.Axis.Z, 0.5, BABYLON.Space.WORLD); // 🔑 Z-Anpassung für besser
 
 
         // Create portal geometry (pillars)
