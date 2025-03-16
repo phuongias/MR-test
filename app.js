@@ -313,22 +313,28 @@ const createScene = async function () {
             // Simple check based on Z position (you may want to adjust this for your scene)
             if (xrCamera.position.z > portalPosition.z) {
                 // User is inside the virtual world: adjust occluders for proper occlusion
-                occluder.isVisible = false;
+                /*occluder.isVisible = false;
                 occluderR.isVisible = true;
                 occluderFloor.isVisible = false;
                 occluderTop.isVisible = false;
                 occluderRight.isVisible = false;
                 occluderLeft.isVisible = false;
                 occluderback.isVisible = false;
+                */
+                occluder.isVisible = true;
+                occluderR.isVisible = false;
             } else {
                 // User is in the real world: show occluders to hide the virtual world
-                occluder.isVisible = true;
+               /* occluder.isVisible = true;
                 occluderR.isVisible = false;
                 occluderFloor.isVisible = true;
                 occluderTop.isVisible = true;
                 occluderRight.isVisible = true;
                 occluderLeft.isVisible = true;
-                occluderback.isVisible = true;
+                occluderback.isVisible = true;*/
+
+                occluder.isVisible = true;
+                occluderR.isVisible = false;
             }
         }
     });
@@ -351,10 +357,17 @@ const createScene = async function () {
         rootPilar.rotation.copyFrom(reticleMesh.rotation);
         rootPilar.scaling.copyFrom(reticleMesh.scaling);
 
+
         // Further adjust portal placement as needed (these values mimic original offsets)
         rootPilar.translate(BABYLON.Axis.Y, 1);
         rootPilar.translate(BABYLON.Axis.X, -0.5);
         rootPilar.translate(BABYLON.Axis.Z, 0.05);  // Push slightly into the virtual world
+
+        // Verstecke die virtuelle Welt hinter dem Portal
+        rootScene.position.z = portalPosition.z - 5; // Virtuelle Welt hinter dem Portal
+
+        // Stelle sicher, dass nur die Portal-Umgebung und die virtuelle Welt sichtbar sind
+        rootScene.setEnabled(true); // Enable the virtual world behind the portal
 
         // Create portal geometry (pillars)
         const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", { height: 2, width: 0.1, depth: 0.1 }, scene);
