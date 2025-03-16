@@ -152,7 +152,15 @@ const createScene = async function () {
     const occluder = booleanCSG.toMesh("occluder", null, scene);
     const occluderR = booleanRCSG.toMesh("occluderR", null, scene);
     // Additional occluder boxes for floor and sides
-    const occluderFloor = BABYLON.MeshBuilder.CreateBox("occluderFloor", { width: 7, depth: 7, height: 0.001 }, scene);
+
+    // In der createScene-Funktion:
+    const occluderFloor = BABYLON.MeshBuilder.CreateBox("occluderFloor", {
+        width: 1,  // Wird später skaliert
+        depth: 1,
+        height: 0.001
+    }, scene);
+
+
     const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", { width: 7, depth: 7, height: 0.001 }, scene);
     const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", { width: 7, depth: 7, height: 0.001 }, scene);
     const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", { width: 7, depth: 7, height: 0.001 }, scene);
@@ -250,6 +258,8 @@ const createScene = async function () {
         }
     }
 
+
+
     // -----------------------------
     // onPointerDown: Handle "Select" / State Transitions
     // -----------------------------
@@ -313,31 +323,30 @@ const createScene = async function () {
             // Simple check based on Z position (you may want to adjust this for your scene)
             if (xrCamera.position.z > portalPosition.z) {
                 // User is inside the virtual world: adjust occluders for proper occlusion
-                /*occluder.isVisible = false;
+                occluder.isVisible = false;
                 occluderR.isVisible = true;
                 occluderFloor.isVisible = false;
                 occluderTop.isVisible = false;
                 occluderRight.isVisible = false;
                 occluderLeft.isVisible = false;
                 occluderback.isVisible = false;
-                */
-                occluder.isVisible = true;
-                occluderR.isVisible = false;
+
             } else {
                 // User is in the real world: show occluders to hide the virtual world
-               /* occluder.isVisible = true;
+                occluder.isVisible = true;
                 occluderR.isVisible = false;
                 occluderFloor.isVisible = true;
                 occluderTop.isVisible = true;
                 occluderRight.isVisible = true;
                 occluderLeft.isVisible = true;
-                occluderback.isVisible = true;*/
+                occluderback.isVisible = true;
 
-                occluder.isVisible = true;
-                occluderR.isVisible = false;
+
             }
         }
     });
+
+
 
     // -----------------------------
     // Activate Portal: Finalize Placement and Create Portal Geometry
@@ -345,65 +354,79 @@ const createScene = async function () {
     function activatePortal() {
         portalAppeared = true;
         if (reticleMesh) {
-            reticleMesh.isVisible = false;  // Hide reticle after placement
+            reticleMesh.isVisible = false;
         }
-        // Enable the virtual world and occluders
+
+        // Enable virtual world and occluders
         rootScene.setEnabled(true);
         rootOccluder.setEnabled(true);
 
-        // Use the final reticle transform for portal placement
-        portalPosition.copyFrom(reticleMesh.position);
+        // Portalgröße aus Reticle-Skalierung berechnen
+        const portalScale = reticleMesh.scaling.x; // Einheitliche Skalierung
+        const portalWidth = 4 * portalScale;  // Ursprüngliche Reticle-Breite: 4m
+        const portalHeight = 2 * portalScale; // Ursprüngliche Reticle-Höhe: 2m
+
+        // Positionierung und Skalierung des Portals
         rootPilar.position.copyFrom(reticleMesh.position);
         rootPilar.rotation.copyFrom(reticleMesh.rotation);
         rootPilar.scaling.copyFrom(reticleMesh.scaling);
 
+        // Virtuelle Welt an Portalgröße anpassen
+        rootScene.scaling.copyFrom(reticleMesh.scaling);
+        rootScene.position.z = 0.05 * portalScale; // Feinabstimmung der Position
 
-        // Further adjust portal placement as needed (these values mimic original offsets)
-        rootPilar.translate(BABYLON.Axis.Y, 1);
-        rootPilar.translate(BABYLON.Axis.X, -0.5);
-        rootPilar.translate(BABYLON.Axis.Z, 0.05);  // Push slightly into the virtual world
+        // In der activatePortal-Funktion:
+        rootScene.scaling.copyFrom(reticleMesh.scaling);
+        rootScene.position.y = -1 * reticleMesh.scaling.y; // Höhenanpassung
 
-        // Verstecke die virtuelle Welt hinter dem Portal
-        rootScene.position.z = portalPosition.z - 5; // Virtuelle Welt hinter dem Portal
 
-        // Stelle sicher, dass nur die Portal-Umgebung und die virtuelle Welt sichtbar sind
-        rootScene.setEnabled(true); // Enable the virtual world behind the portal
+        // Neue Portalpfeiler mit dynamischer Größe
+        const pillarThickness = 0.1 * portalScale;
 
-        // Create portal geometry (pillars)
-        const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", { height: 2, width: 0.1, depth: 0.1 }, scene);
-        const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", { height: 2, width: 0.1, depth: 0.1 }, scene);
-        const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", { height: 1.1, width: 0.1, depth: 0.1 }, scene);
+        // Vertikale Pfeiler (links/rechts)
+        const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", {
+            height: portalHeight,
+            width: pillarThickness,
+            depth: pillarThickness
+        }, scene);
+        pilar1.position.x = -portalWidth/2 + pillarThickness/2;
 
-        // Adjust positions and rotations of the pillars to form a portal
-        pilar2.translate(BABYLON.Axis.X, 1, BABYLON.Space.LOCAL);
-        pilar3.addRotation(0, 0, Math.PI / 2);
-        pilar3.translate(BABYLON.Axis.Y, 1, BABYLON.Space.LOCAL);
-        pilar3.translate(BABYLON.Axis.Y, -0.5, BABYLON.Space.LOCAL);
+        const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", {
+            height: portalHeight,
+            width: pillarThickness,
+            depth: pillarThickness
+        }, scene);
+        pilar2.position.x = portalWidth/2 - pillarThickness/2;
 
-        // Parent pillars to rootPilar so that they inherit its transform
-        pilar1.parent = rootPilar;
-        pilar2.parent = rootPilar;
-        pilar3.parent = rootPilar;
+        // Horizontale Pfeiler (oben/unten)
+        const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", {
+            width: portalWidth,
+            height: pillarThickness,
+            depth: pillarThickness
+        }, scene);
+        pilar3.position.y = portalHeight/2 - pillarThickness/2;
 
-        // Set rendering group and apply neon material for glowing effect
-        pilar1.renderingGroupId = 2;
-        pilar2.renderingGroupId = 2;
-        pilar3.renderingGroupId = 2;
-        pilar1.material = neonMaterial;
-        pilar2.material = neonMaterial;
-        pilar3.material = neonMaterial;
+        const pilar4 = BABYLON.MeshBuilder.CreateBox("pilar4", {
+            width: portalWidth,
+            height: pillarThickness,
+            depth: pillarThickness
+        }, scene);
+        pilar4.position.y = -portalHeight/2 + pillarThickness/2;
 
-        // Add particle effects to the portal (using provided snippet IDs)
-        BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#488", scene, false).then(system => {
-            system.emitter = pilar3;
-        });
-        BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#489", scene, false).then(system => {
-            system.emitter = pilar1;
-        });
-        BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#489", scene, false).then(system => {
-            system.emitter = pilar2;
+        // Occluder an neue Größe anpassen
+        occluderFloor.scaling.x = portalWidth * 2;
+        occluderFloor.scaling.z = portalHeight * 2;
+        occluderFloor.position.y = -0.5 * portalScale;
+
+        // Particle Systems
+        [pilar1, pilar2, pilar3].forEach(pillar => {
+            pillar.material = neonMaterial;
+            pillar.parent = rootPilar;
+            BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#488", scene)
+                .then(system => system.emitter = pillar);
         });
     }
+
 
     // -----------------------------
     // Hide GUI in AR Mode and Show on Session End
