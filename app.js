@@ -341,51 +341,56 @@ const createScene = async function () {
     // -----------------------------
     function activatePortal() {
         portalAppeared = true;
-        if (reticleMesh) {
-            reticleMesh.isVisible = false;  // Reticle ausblenden
+
+        if (!reticleMesh) {
+            console.error("ReticleMesh ist nicht definiert. Portal kann nicht aktiviert werden.");
+            return;
         }
 
-        // Virtual World aktivieren
-        rootScene.setEnabled(true);
-        rootOccluder.setEnabled(true);
+        reticleMesh.isVisible = false;  // Reticle ausblenden
 
-        // Portal-Position, Rotation und Skalierung exakt wie das Reticle übernehmen
-        portalPosition.copyFrom(reticleMesh.position);
+        if (rootScene) rootScene.setEnabled(true);
+        if (rootOccluder) rootOccluder.setEnabled(true);
+
+        if (!rootPilar) {
+            rootPilar = new BABYLON.TransformNode("rootPilar", scene);
+        }
+
+        // Sicherstellen, dass die Skalierung gültig ist
+        if (!isFinite(reticleMesh.scaling.x) || reticleMesh.scaling.x <= 0) {
+            reticleMesh.scaling.set(1, 1, 1); // Standardwerte setzen
+        }
+
+        // Position, Rotation und Skalierung übernehmen
         rootPilar.position.copyFrom(reticleMesh.position);
         rootPilar.rotation.copyFrom(reticleMesh.rotation);
-        rootPilar.scaling.copyFrom(reticleMesh.scaling);  // Skalierung übernehmen
+        rootPilar.scaling.copyFrom(reticleMesh.scaling);
 
-        // Optional: Falls Portal eine Mindestgröße haben soll, setze ein Minimum:
+        // Mindestgröße für das Portal setzen
         rootPilar.scaling.x = Math.max(rootPilar.scaling.x, 0.5);
         rootPilar.scaling.y = Math.max(rootPilar.scaling.y, 0.5);
         rootPilar.scaling.z = Math.max(rootPilar.scaling.z, 0.5);
 
-        // Falls das Portal zusätzliche Elemente hat (z. B. Säulen), müssen diese ebenfalls skaliert werden:
+        console.log("Portal Position:", rootPilar.position);
+        console.log("Portal Rotation:", rootPilar.rotation);
+        console.log("Portal Skalierung:", rootPilar.scaling);
+
+        // Eltern-Kind-Beziehungen setzen, aber erst nach der Transformation
         pilar1.parent = rootPilar;
         pilar2.parent = rootPilar;
         pilar3.parent = rootPilar;
 
-        // Setze das Rendering für die Säulen und das Material
-        pilar1.renderingGroupId = 2;
-        pilar2.renderingGroupId = 2;
-        pilar3.renderingGroupId = 2;
-        pilar1.material = neonMaterial;
-        pilar2.material = neonMaterial;
-        pilar3.material = neonMaterial;
-
-
-
-
-    // Add particle effects to the portal (using provided snippet IDs)
-        BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#488", scene, false).then(system => {
-            system.emitter = pilar3;
+        // Rendering-Gruppe und Material setzen
+        [pilar1, pilar2, pilar3].forEach(pilar => {
+            if (pilar) {
+                pilar.renderingGroupId = 2;
+                pilar.material = neonMaterial;
+            }
         });
-        BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#489", scene, false).then(system => {
-            system.emitter = pilar1;
-        });
-        BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#489", scene, false).then(system => {
-            system.emitter = pilar2;
-        });
+
+
+
+
     }
 
     // -----------------------------
