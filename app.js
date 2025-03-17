@@ -182,8 +182,8 @@ const createScene = async function () {
     engine.displayLoadingUI(); // Show loading screen
     const virtualWorldResult = await BABYLON.SceneLoader.ImportMeshAsync(
         "",
-        "https://www.babylonjs.com/Scenes/hillvalley/",
-        "HillValley.babylon",
+        "./",
+        "scene.babylon",
         scene
     );
     engine.hideLoadingUI(); // Hide loading screen once loaded
