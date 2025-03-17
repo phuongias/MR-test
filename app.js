@@ -289,18 +289,21 @@ const createScene = async function () {
             for (const inputSource of xrSession.inputSources) {
                 if (inputSource.gamepad) {
                     const gamepad = inputSource.gamepad;
-                    const xAxis = gamepad.axes[2];  // Horizontal axis (e.g., for rotation)
-                    const yAxis = gamepad.axes[3];  // Vertical axis (e.g., for height/scale)
-                    if (state === 1) {
-                        // Adjust reticle rotation around Y-axis
+                    const xAxis = gamepad.axes[2];
+                    const yAxis = gamepad.axes[3];
+
+                    // State 3: Skalierung von Breite (X) und Höhe (Z) getrennt
+                    if (state === 3) {
+                        const scaleSpeed = 0.02;
+                        const newWidth = Math.max(0.5, reticleMesh.scaling.x + xAxis * scaleSpeed);
+                        const newHeight = Math.max(0.5, reticleMesh.scaling.z + yAxis * scaleSpeed);
+                        reticleMesh.scaling.set(newWidth, 1, newHeight);
+                    }
+                    // Rest bleibt gleich
+                    else if (state === 1) {
                         reticleMesh.rotation.y += xAxis * 0.025;
                     } else if (state === 2) {
-                        // Adjust reticle height (Y position)
                         reticleMesh.position.y += yAxis * 0.05;
-                    } else if (state === 3) {
-                        // Adjust reticle scaling (uniform scale)
-                        const scale = Math.max(0.1, reticleMesh.scaling.x + yAxis * 0.02);
-                        reticleMesh.scaling.set(scale, scale, scale);
                     }
                 }
             }
@@ -340,49 +343,37 @@ const createScene = async function () {
     // Activate Portal: Finalize Placement and Create Portal Geometry
     // -----------------------------
     function activatePortal() {
-            portalAppeared = true;
-            if (reticleMesh) {
-                reticleMesh.isVisible = false;
-            }
-            rootScene.setEnabled(true);
-            rootOccluder.setEnabled(true);
+        portalAppeared = true;
+        if (reticleMesh) reticleMesh.isVisible = false;
 
-            portalPosition.copyFrom(reticleMesh.position);
-            rootPilar.position.copyFrom(reticleMesh.position);
-            rootPilar.rotation.copyFrom(reticleMesh.rotation);
-            rootPilar.scaling.copyFrom(reticleMesh.scaling);
+        // Korrekte Größenberechnung unter Berücksichtigung der Plane-Ausrichtung
+        const portalWidth = reticleMesh.scaling.x * 4;  // Original width (X-Achse)
+        const portalHeight = reticleMesh.scaling.z * 2; // Original height (Z-Achse)
 
-            // Neue Berechnungen für die Portalgröße
-            const scaleX = reticleMesh.scaling.x;
-            const scaleY = reticleMesh.scaling.y;
-            const portalWidth = 4 * scaleX;  // Original width des Planes (4) * Skalierung
-            const portalHeight = 2 * scaleY; // Original height des Planes (2) * Skalierung
+        // Säulen mit dynamischer Größe
+        const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", {
+            height: portalHeight,
+            width: 0.1,
+            depth: 0.1
+        }, scene);
 
-            // Säulen erstellen mit dynamischen Abmessungen
-            const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", {
-                height: portalHeight,
-                width: 0.1,
-                depth: 0.1
-            }, scene);
+        const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", {
+            height: portalHeight,
+            width: 0.1,
+            depth: 0.1
+        }, scene);
 
-            const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", {
-                height: portalHeight,
-                width: 0.1,
-                depth: 0.1
-            }, scene);
+        // Horizontale Stange mit korrekter Breite
+        const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", {
+            width: portalWidth,
+            height: 0.1,
+            depth: 0.1
+        }, scene);
 
-            // Horizontale Stange mit dynamischer Breite
-            const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", {
-                width: portalWidth,
-                height: 0.1,
-                depth: 0.1
-            }, scene);
-
-            // Positionierung anpassen
-            pilar1.position.x = -portalWidth/2 + 0.05; // Links versetzt um halbe Breite
-            pilar2.position.x = portalWidth/2 - 0.05;   // Rechts versetzt
-
-            pilar3.position.y = portalHeight/2 - 0.05;  // Oben positioniert
+        // Positionierung anpassen
+        pilar1.position.x = -portalWidth/2 + 0.05;
+        pilar2.position.x = portalWidth/2 - 0.05;
+        pilar3.position.y = portalHeight/2 - 0.05;
 
             // Alte Translate- und Rotationsbefehle entfernen
             rootPilar.translate(BABYLON.Axis.Z, 0.05);
