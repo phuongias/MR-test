@@ -238,7 +238,7 @@ const createScene = async function () {
     // -----------------------------
     function createReticle() {
         if (!reticleMesh) {
-            reticleMesh = BABYLON.MeshBuilder.CreatePlane("reticleMesh", { width: 4, height: 2 }, scene);
+            reticleMesh = BABYLON.MeshBuilder.CreatePlane("reticleMesh", { width: 2, height: 2 }, scene);
             let reticleMat = new BABYLON.StandardMaterial("reticleMaterial", scene);
             reticleMat.diffuseColor = new BABYLON.Color3(0, 0, 1);
             reticleMat.backFaceCulling = false;
@@ -342,43 +342,30 @@ const createScene = async function () {
     function activatePortal() {
         portalAppeared = true;
         if (reticleMesh) {
-            reticleMesh.isVisible = false;  // Hide reticle after placement
+            reticleMesh.isVisible = false;  // Reticle ausblenden
         }
-        // Enable the virtual world and occluders
+
+        // Virtual World aktivieren
         rootScene.setEnabled(true);
         rootOccluder.setEnabled(true);
 
-        // Use the final reticle transform for portal placement
+        // Portal-Position, Rotation und Skalierung exakt wie das Reticle übernehmen
         portalPosition.copyFrom(reticleMesh.position);
         rootPilar.position.copyFrom(reticleMesh.position);
         rootPilar.rotation.copyFrom(reticleMesh.rotation);
-        rootPilar.scaling.copyFrom(reticleMesh.scaling);
+        rootPilar.scaling.copyFrom(reticleMesh.scaling);  // Skalierung übernehmen
 
+        // Optional: Falls Portal eine Mindestgröße haben soll, setze ein Minimum:
+        rootPilar.scaling.x = Math.max(rootPilar.scaling.x, 0.5);
+        rootPilar.scaling.y = Math.max(rootPilar.scaling.y, 0.5);
+        rootPilar.scaling.z = Math.max(rootPilar.scaling.z, 0.5);
 
-        // Further adjust portal placement as needed (these values mimic original offsets)
-        rootPilar.translate(BABYLON.Axis.Y, 1);
-        rootPilar.translate(BABYLON.Axis.X, -0.5);
-        rootPilar.translate(BABYLON.Axis.Z, 0.05);  // Push slightly into the virtual world
-
-
-
-        // Create portal geometry (pillars)
-        const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", { height: 2, width: 0.1, depth: 0.1 }, scene);
-        const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", { height: 2, width: 0.1, depth: 0.1 }, scene);
-        const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", { height: 1.1, width: 0.1, depth: 0.1 }, scene);
-
-        // Adjust positions and rotations of the pillars to form a portal
-        pilar2.translate(BABYLON.Axis.X, 1, BABYLON.Space.LOCAL);
-        pilar3.addRotation(0, 0, Math.PI / 2);
-        pilar3.translate(BABYLON.Axis.Y, 1, BABYLON.Space.LOCAL);
-        pilar3.translate(BABYLON.Axis.Y, -0.5, BABYLON.Space.LOCAL);
-
-        // Parent pillars to rootPilar so that they inherit its transform
+        // Falls das Portal zusätzliche Elemente hat (z. B. Säulen), müssen diese ebenfalls skaliert werden:
         pilar1.parent = rootPilar;
         pilar2.parent = rootPilar;
         pilar3.parent = rootPilar;
 
-        // Set rendering group and apply neon material for glowing effect
+        // Setze das Rendering für die Säulen und das Material
         pilar1.renderingGroupId = 2;
         pilar2.renderingGroupId = 2;
         pilar3.renderingGroupId = 2;
@@ -386,7 +373,10 @@ const createScene = async function () {
         pilar2.material = neonMaterial;
         pilar3.material = neonMaterial;
 
-        // Add particle effects to the portal (using provided snippet IDs)
+
+
+
+    // Add particle effects to the portal (using provided snippet IDs)
         BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#488", scene, false).then(system => {
             system.emitter = pilar3;
         });
