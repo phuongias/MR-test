@@ -30,7 +30,7 @@ var startRenderLoop = function (engine, canvas) {
 };
 
 // Create the Babylon Engine
-var createDefaultEngine = function () {
+var createDefaultEngine = function() {
     return new BABYLON.Engine(canvas, true, {
         preserveDrawingBuffer: true,
         stencil: true,
@@ -87,9 +87,7 @@ const createScene = async function () {
         uiOptions: {
             sessionMode: "immersive-ar",
             referenceSpaceType: "local-floor",
-            onError: (error) => {
-                alert(error);
-            }
+            onError: (error) => { alert(error); }
         },
         optionalFeatures: true
     });
@@ -106,11 +104,7 @@ const createScene = async function () {
     neonMaterial.emissiveColor = new BABYLON.Color3(0.35, 0.96, 0.88);
 
     // Create the hit-test marker (a torus) as in the original Babylon code
-    const marker = BABYLON.MeshBuilder.CreateTorus('marker', {
-        diameter: 0.15,
-        thickness: 0.05,
-        tessellation: 32
-    }, scene);
+    const marker = BABYLON.MeshBuilder.CreateTorus('marker', { diameter: 0.15, thickness: 0.05, tessellation: 32 }, scene);
     marker.isVisible = false;
     marker.rotationQuaternion = new BABYLON.Quaternion();
     marker.renderingGroupId = 2;
@@ -120,16 +114,14 @@ const createScene = async function () {
     let hitTest;
     xrTest.onHitTestResultObservable.add((results) => {
         if (results.length) {
-            // Reticle sichtbar machen, wenn aktiv
+            // Only show marker when portal is not active and we're in placement mode (state 0)
             marker.isVisible = !portalAppeared && (state === 0);
-            reticleMesh.isVisible = portalAppeared ? false : (state > 0); // Neu
-
             hitTest = results[0];
             // Decompose the hit-test matrix to update marker position and rotation
             hitTest.transformationMatrix.decompose(undefined, marker.rotationQuaternion, marker.position);
         } else {
             marker.isVisible = false;
-            if (reticleMesh) reticleMesh.isVisible = false; // Neu
+            hitTest = undefined;
         }
     });
 
@@ -147,8 +139,8 @@ const createScene = async function () {
     // Occluder Setup using CSG (Constructive Solid Geometry)
     // -----------------------------
     // Create a large ground box and a hole box for occluders
-    const ground = BABYLON.MeshBuilder.CreateBox("ground", {width: 500, depth: 500, height: 0.001}, scene);
-    const hole = BABYLON.MeshBuilder.CreateBox("hole", {size: 2, width: 1, height: 0.01}, scene);
+    const ground = BABYLON.MeshBuilder.CreateBox("ground", { width: 500, depth: 500, height: 0.001 }, scene);
+    const hole = BABYLON.MeshBuilder.CreateBox("hole", { size: 2, width: 1, height: 0.01 }, scene);
 
     // Perform CSG subtraction for occluders
     const groundCSG = BABYLON.CSG.FromMesh(ground);
@@ -160,11 +152,11 @@ const createScene = async function () {
     const occluder = booleanCSG.toMesh("occluder", null, scene);
     const occluderR = booleanRCSG.toMesh("occluderR", null, scene);
     // Additional occluder boxes for floor and sides
-    const occluderFloor = BABYLON.MeshBuilder.CreateBox("occluderFloor", {width: 7, depth: 7, height: 0.001}, scene);
-    const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", {width: 7, depth: 7, height: 0.001}, scene);
-    const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", {width: 7, depth: 7, height: 0.001}, scene);
-    const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", {width: 7, depth: 7, height: 0.001}, scene);
-    const occluderback = BABYLON.MeshBuilder.CreateBox("occluderback", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderFloor = BABYLON.MeshBuilder.CreateBox("occluderFloor", { width: 7, depth: 7, height: 0.001 }, scene);
+    const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", { width: 7, depth: 7, height: 0.001 }, scene);
+    const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", { width: 7, depth: 7, height: 0.001 }, scene);
+    const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", { width: 7, depth: 7, height: 0.001 }, scene);
+    const occluderback = BABYLON.MeshBuilder.CreateBox("occluderback", { width: 7, depth: 7, height: 0.001 }, scene);
 
     // Create occluder material to force depth write
     const occluderMaterial = new BABYLON.StandardMaterial("om", scene);
@@ -246,25 +238,15 @@ const createScene = async function () {
     // -----------------------------
     function createReticle() {
         if (!reticleMesh) {
-            // Plane in Y-Achse erstellen (vertikal)
-            reticleMesh = BABYLON.MeshBuilder.CreatePlane("reticleMesh", {
-                sourcePlane: new BABYLON.Plane(0, 1, 0, 0) // Y-Achse als Normale
-            });
-
+            reticleMesh = BABYLON.MeshBuilder.CreatePlane("reticleMesh", { width: 4, height: 2 }, scene);
             let reticleMat = new BABYLON.StandardMaterial("reticleMaterial", scene);
             reticleMat.diffuseColor = new BABYLON.Color3(0, 0, 1);
             reticleMat.backFaceCulling = false;
-
-            // Transparenz hinzufügen für bessere Sichtbarkeit
-            reticleMat.alpha = 0.7;
-            reticleMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHATEST;
-
             reticleMesh.material = reticleMat;
-            reticleMesh.renderingGroupId = 3;
+            reticleMesh.renderingGroupId = 3;  // Render in its own group
             reticleMesh.isVisible = false;
-
-            // Rotation korrigieren (90 Grad um X-Achse)
-            reticleMesh.rotation.x = Math.PI / 2; // Wichtig für vertikale Ausrichtung
+            reticleMesh.rotation = BABYLON.Vector3.Zero();
+            reticleMesh.scaling = new BABYLON.Vector3(1, 1, 1);
         }
     }
 
@@ -275,12 +257,14 @@ const createScene = async function () {
         // Only process if in AR session
         if (xr.baseExperience.state === BABYLON.WebXRState.IN_XR) {
             if (state === 0 && hitTest) {
+                // First tap: Create and position the reticle using the hit-test marker
                 createReticle();
-                // Position UND Rotation vom Hit-Test übernehmen
                 reticleMesh.position.copyFrom(marker.position);
-                reticleMesh.rotationQuaternion = marker.rotationQuaternion.clone();
-                reticleMesh.isVisible = true; // Sicherstellen, dass sichtbar
-                state = 1;
+                // Convert marker rotation (quaternion) to Euler angles; we use Y rotation only here
+                let euler = marker.rotationQuaternion.toEulerAngles();
+                reticleMesh.rotation.y = euler.y;
+                reticleMesh.isVisible = true;
+                state = 1;  // Next state: Adjust rotation
             } else if (state === 1) {
                 // Second tap: Finish rotation adjustment; move to height adjustment
                 state = 2;
@@ -358,58 +342,49 @@ const createScene = async function () {
     function activatePortal() {
         portalAppeared = true;
         if (reticleMesh) {
-            reticleMesh.isVisible = false;
+            reticleMesh.isVisible = false;  // Hide reticle after placement
         }
+        // Enable the virtual world and occluders
         rootScene.setEnabled(true);
         rootOccluder.setEnabled(true);
 
-        // Portal erhält Position, Rotation und Skalierung vom reticleMesh
+        // Use the final reticle transform for portal placement
         portalPosition.copyFrom(reticleMesh.position);
         rootPilar.position.copyFrom(reticleMesh.position);
         rootPilar.rotation.copyFrom(reticleMesh.rotation);
         rootPilar.scaling.copyFrom(reticleMesh.scaling);
 
-        // Portaldimensionen basierend auf reticleMesh-Skalierung
-        const portalWidth = 1 * reticleMesh.scaling.x;
-        const portalHeight = 1 * reticleMesh.scaling.y;
 
-        // Vertikale Pfeiler (links und rechts)
-        const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", {
-            height: portalHeight,
-            width: 0.1,
-            depth: 0.1
-        }, scene);
-        const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", {
-            height: portalHeight,
-            width: 0.1,
-            depth: 0.1
-        }, scene);
+        // Further adjust portal placement as needed (these values mimic original offsets)
+        rootPilar.translate(BABYLON.Axis.Y, 1);
+        rootPilar.translate(BABYLON.Axis.X, -0.5);
+        rootPilar.translate(BABYLON.Axis.Z, 0.05);  // Push slightly into the virtual world
 
-        // Horizontaler Balken (oben)
-        const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", {
-            height: portalWidth, // Balkenlänge = Portalbreite
-            width: 0.1,
-            depth: 0.1
-        }, scene);
 
-        // Positionierung der Elemente
-        pilar1.position.x = -portalWidth / 2; // Linker Pfeiler
-        pilar2.position.x = portalWidth / 2;  // Rechter Pfeiler
-        pilar3.position.y = portalHeight / 2; // Balken oben
-        pilar3.rotation.z = Math.PI / 2;      // Balken drehen
 
-        // Elemente an rootPilar hängen
+        // Create portal geometry (pillars)
+        const pilar1 = BABYLON.MeshBuilder.CreateBox("pilar1", { height: 2, width: 0.1, depth: 0.1 }, scene);
+        const pilar2 = BABYLON.MeshBuilder.CreateBox("pilar2", { height: 2, width: 0.1, depth: 0.1 }, scene);
+        const pilar3 = BABYLON.MeshBuilder.CreateBox("pilar3", { height: 1.1, width: 0.1, depth: 0.1 }, scene);
+
+        // Adjust positions and rotations of the pillars to form a portal
+        pilar2.translate(BABYLON.Axis.X, 1, BABYLON.Space.LOCAL);
+        pilar3.addRotation(0, 0, Math.PI / 2);
+        pilar3.translate(BABYLON.Axis.Y, 1, BABYLON.Space.LOCAL);
+        pilar3.translate(BABYLON.Axis.Y, -0.5, BABYLON.Space.LOCAL);
+
+        // Parent pillars to rootPilar so that they inherit its transform
         pilar1.parent = rootPilar;
         pilar2.parent = rootPilar;
         pilar3.parent = rootPilar;
 
-        // Material und Rendering-Gruppen
-        pilar1.material = neonMaterial;
-        pilar2.material = neonMaterial;
-        pilar3.material = neonMaterial;
+        // Set rendering group and apply neon material for glowing effect
         pilar1.renderingGroupId = 2;
         pilar2.renderingGroupId = 2;
         pilar3.renderingGroupId = 2;
+        pilar1.material = neonMaterial;
+        pilar2.material = neonMaterial;
+        pilar3.material = neonMaterial;
 
         // Add particle effects to the portal (using provided snippet IDs)
         BABYLON.ParticleHelper.ParseFromSnippetAsync("UY098C#488", scene, false).then(system => {
@@ -439,7 +414,6 @@ const createScene = async function () {
     scene.setRenderingAutoClearDepthStencil(1, false, false, false);
     scene.setRenderingAutoClearDepthStencil(2, false, false, false);
     scene.setRenderingAutoClearDepthStencil(0, true, true, true);
-
     scene.autoClear = true;
 
     return scene;
@@ -448,17 +422,17 @@ const createScene = async function () {
 // -----------------------------
 // Engine Initialization and Scene Launch
 // -----------------------------
-window.initFunction = async function () {
-    var asyncEngineCreation = async function () {
+window.initFunction = async function() {
+    var asyncEngineCreation = async function() {
         try {
             return createDefaultEngine();
-        } catch (e) {
+        } catch(e) {
             console.log("createEngine function failed. Creating the default engine instead");
             return createDefaultEngine();
         }
     };
     window.engine = await asyncEngineCreation();
-    if (!engine) throw 'engine should not be null!.';
+    if (!engine) throw 'engine should not be null.';
     startRenderLoop(engine, canvas);
     window.scene = createScene();
 };
