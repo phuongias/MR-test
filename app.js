@@ -30,7 +30,7 @@ var startRenderLoop = function (engine, canvas) {
 };
 
 // Create the Babylon Engine
-var createDefaultEngine = function() {
+var createDefaultEngine = function () {
     return new BABYLON.Engine(canvas, true, {
         preserveDrawingBuffer: true,
         stencil: true,
@@ -87,7 +87,9 @@ const createScene = async function () {
         uiOptions: {
             sessionMode: "immersive-ar",
             referenceSpaceType: "local-floor",
-            onError: (error) => { alert(error); }
+            onError: (error) => {
+                alert(error);
+            }
         },
         optionalFeatures: true
     });
@@ -104,7 +106,11 @@ const createScene = async function () {
     neonMaterial.emissiveColor = new BABYLON.Color3(0.35, 0.96, 0.88);
 
     // Create the hit-test marker (a torus) as in the original Babylon code
-    const marker = BABYLON.MeshBuilder.CreateTorus('marker', { diameter: 0.15, thickness: 0.05, tessellation: 32 }, scene);
+    const marker = BABYLON.MeshBuilder.CreateTorus('marker', {
+        diameter: 0.15,
+        thickness: 0.05,
+        tessellation: 32
+    }, scene);
     marker.isVisible = false;
     marker.rotationQuaternion = new BABYLON.Quaternion();
     marker.renderingGroupId = 2;
@@ -114,14 +120,16 @@ const createScene = async function () {
     let hitTest;
     xrTest.onHitTestResultObservable.add((results) => {
         if (results.length) {
-            // Only show marker when portal is not active and we're in placement mode (state 0)
+            // Reticle sichtbar machen, wenn aktiv
             marker.isVisible = !portalAppeared && (state === 0);
+            reticleMesh.isVisible = portalAppeared ? false : (state > 0); // Neu
+
             hitTest = results[0];
             // Decompose the hit-test matrix to update marker position and rotation
             hitTest.transformationMatrix.decompose(undefined, marker.rotationQuaternion, marker.position);
         } else {
             marker.isVisible = false;
-            hitTest = undefined;
+            if (reticleMesh) reticleMesh.isVisible = false; // Neu
         }
     });
 
@@ -139,8 +147,8 @@ const createScene = async function () {
     // Occluder Setup using CSG (Constructive Solid Geometry)
     // -----------------------------
     // Create a large ground box and a hole box for occluders
-    const ground = BABYLON.MeshBuilder.CreateBox("ground", { width: 500, depth: 500, height: 0.001 }, scene);
-    const hole = BABYLON.MeshBuilder.CreateBox("hole", { size: 2, width: 1, height: 0.01 }, scene);
+    const ground = BABYLON.MeshBuilder.CreateBox("ground", {width: 500, depth: 500, height: 0.001}, scene);
+    const hole = BABYLON.MeshBuilder.CreateBox("hole", {size: 2, width: 1, height: 0.01}, scene);
 
     // Perform CSG subtraction for occluders
     const groundCSG = BABYLON.CSG.FromMesh(ground);
@@ -152,11 +160,11 @@ const createScene = async function () {
     const occluder = booleanCSG.toMesh("occluder", null, scene);
     const occluderR = booleanRCSG.toMesh("occluderR", null, scene);
     // Additional occluder boxes for floor and sides
-    const occluderFloor = BABYLON.MeshBuilder.CreateBox("occluderFloor", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", { width: 7, depth: 7, height: 0.001 }, scene);
-    const occluderback = BABYLON.MeshBuilder.CreateBox("occluderback", { width: 7, depth: 7, height: 0.001 }, scene);
+    const occluderFloor = BABYLON.MeshBuilder.CreateBox("occluderFloor", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderTop = BABYLON.MeshBuilder.CreateBox("occluderTop", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderRight = BABYLON.MeshBuilder.CreateBox("occluderRight", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderLeft = BABYLON.MeshBuilder.CreateBox("occluderLeft", {width: 7, depth: 7, height: 0.001}, scene);
+    const occluderback = BABYLON.MeshBuilder.CreateBox("occluderback", {width: 7, depth: 7, height: 0.001}, scene);
 
     // Create occluder material to force depth write
     const occluderMaterial = new BABYLON.StandardMaterial("om", scene);
@@ -238,15 +246,25 @@ const createScene = async function () {
     // -----------------------------
     function createReticle() {
         if (!reticleMesh) {
-            reticleMesh = BABYLON.MeshBuilder.CreatePlane("reticleMesh");
-            let reticleMat = new BABYLON.StandardMaterial("reticleMaterial",{}, scene);
+            // Plane in Y-Achse erstellen (vertikal)
+            reticleMesh = BABYLON.MeshBuilder.CreatePlane("reticleMesh", {
+                sourcePlane: new BABYLON.Plane(0, 1, 0, 0) // Y-Achse als Normale
+            });
+
+            let reticleMat = new BABYLON.StandardMaterial("reticleMaterial", scene);
             reticleMat.diffuseColor = new BABYLON.Color3(0, 0, 1);
             reticleMat.backFaceCulling = false;
+
+            // Transparenz hinzufügen für bessere Sichtbarkeit
+            reticleMat.alpha = 0.7;
+            reticleMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHATEST;
+
             reticleMesh.material = reticleMat;
-            reticleMesh.renderingGroupId = 3;  // Render in its own group
+            reticleMesh.renderingGroupId = 3;
             reticleMesh.isVisible = false;
-            reticleMesh.rotation = BABYLON.Vector3.Zero();
-            reticleMesh.scaling = new BABYLON.Vector3(1, 1, 1);
+
+            // Rotation korrigieren (90 Grad um X-Achse)
+            reticleMesh.rotation.x = Math.PI / 2; // Wichtig für vertikale Ausrichtung
         }
     }
 
@@ -257,14 +275,12 @@ const createScene = async function () {
         // Only process if in AR session
         if (xr.baseExperience.state === BABYLON.WebXRState.IN_XR) {
             if (state === 0 && hitTest) {
-                // First tap: Create and position the reticle using the hit-test marker
                 createReticle();
+                // Position UND Rotation vom Hit-Test übernehmen
                 reticleMesh.position.copyFrom(marker.position);
-                // Convert marker rotation (quaternion) to Euler angles; we use Y rotation only here
-                let euler = marker.rotationQuaternion.toEulerAngles();
-                reticleMesh.rotation.y = euler.y;
-                reticleMesh.isVisible = true;
-                state = 1;  // Next state: Adjust rotation
+                reticleMesh.rotationQuaternion = marker.rotationQuaternion.clone();
+                reticleMesh.isVisible = true; // Sicherstellen, dass sichtbar
+                state = 1;
             } else if (state === 1) {
                 // Second tap: Finish rotation adjustment; move to height adjustment
                 state = 2;
@@ -377,10 +393,10 @@ const createScene = async function () {
         }, scene);
 
         // Positionierung der Elemente
-        pilar1.position.x = -portalWidth/2; // Linker Pfeiler
-        pilar2.position.x = portalWidth/2;  // Rechter Pfeiler
-        pilar3.position.y = portalHeight/2; // Balken oben
-        pilar3.rotation.z = Math.PI/2;      // Balken drehen
+        pilar1.position.x = -portalWidth / 2; // Linker Pfeiler
+        pilar2.position.x = portalWidth / 2;  // Rechter Pfeiler
+        pilar3.position.y = portalHeight / 2; // Balken oben
+        pilar3.rotation.z = Math.PI / 2;      // Balken drehen
 
         // Elemente an rootPilar hängen
         pilar1.parent = rootPilar;
@@ -423,6 +439,7 @@ const createScene = async function () {
     scene.setRenderingAutoClearDepthStencil(1, false, false, false);
     scene.setRenderingAutoClearDepthStencil(2, false, false, false);
     scene.setRenderingAutoClearDepthStencil(0, true, true, true);
+    scene.setRenderingOrder(3, [0, 1, 2, 3]);
     scene.autoClear = true;
 
     return scene;
@@ -431,11 +448,11 @@ const createScene = async function () {
 // -----------------------------
 // Engine Initialization and Scene Launch
 // -----------------------------
-window.initFunction = async function() {
-    var asyncEngineCreation = async function() {
+window.initFunction = async function () {
+    var asyncEngineCreation = async function () {
         try {
             return createDefaultEngine();
-        } catch(e) {
+        } catch (e) {
             console.log("createEngine function failed. Creating the default engine instead");
             return createDefaultEngine();
         }
