@@ -423,6 +423,7 @@ const createScene = async function () {
 // Engine Initialization and Scene Launch
 // -----------------------------
 window.initFunction = async function() {
+    var light = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0, 1, 0), scene);
     var asyncEngineCreation = async function() {
         try {
             return createDefaultEngine();
