@@ -439,7 +439,7 @@ const createScene = async function () {
     scene.setRenderingAutoClearDepthStencil(1, false, false, false);
     scene.setRenderingAutoClearDepthStencil(2, false, false, false);
     scene.setRenderingAutoClearDepthStencil(0, true, true, true);
-    scene.setRenderingOrder(3, [0, 1, 2, 3]);
+
     scene.autoClear = true;
 
     return scene;
