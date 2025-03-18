@@ -458,7 +458,7 @@ window.initFunction = async function () {
         }
     };
     window.engine = await asyncEngineCreation();
-    if (!engine) throw 'engine should not be null.';
+    if (!engine) throw 'engine should not be null!.';
     startRenderLoop(engine, canvas);
     window.scene = createScene();
 };
