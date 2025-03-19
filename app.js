@@ -46,7 +46,14 @@ const createScene = async function () {
     camera.attachControl(canvas, true); //ermöglicht die Steuerung der Kamera mit der Maus und Tastatur
 
 
+// *** LICHT HIER HINZUFÜGEN ***
+    // HemisphericLight erstellen (ambientes Licht)
+    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1000, 5), scene);
+    light.intensity = 1; // Helligkeit anpassen
 
+    // DirectionalLight für direkte Beleuchtung (optional)
+    const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-0.5, -1, -0.5), scene);
+    dirLight.intensity = 0.8;
 
     //Prüft, ob AR unterstützt wird
     const arAvailable = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
@@ -245,8 +252,8 @@ const createScene = async function () {
 
     //Virtuelle Welt laden -> Hill Valley
     engine.displayLoadingUI(); //Display the loading screen as the scene takes a few seconds to load
-    const virtualWorldResult = await BABYLON.SceneLoader.ImportMeshAsync("", "https://www.babylonjs.com/Scenes/hillvalley/",
-        "HillValley.babylon", scene);
+    const virtualWorldResult = await BABYLON.SceneLoader.ImportMeshAsync("", "./",
+        "testscene5.glb", scene);
     engine.hideLoadingUI(); //Hide Loadingscreen once the scene is loaded
     for (let child of virtualWorldResult.meshes) {
         child.renderingGroupId = 1;
