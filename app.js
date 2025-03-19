@@ -183,7 +183,7 @@ const createScene = async function () {
     const virtualWorldResult = await BABYLON.SceneLoader.ImportMeshAsync(
         "",
         "./",
-        "testscene6.glb",
+        "scenebb.glb",
         scene
     );
     engine.hideLoadingUI(); // Hide loading screen once loaded
