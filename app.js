@@ -43,7 +43,7 @@ const createScene = async function () {
 // *** LICHT HIER HINZUFÜGEN ***
     // HemisphericLight erstellen (ambientes Licht)
     var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1000, 5), scene);
-    light.intensity = 0.5; // Helligkeit anpassen
+    light.intensity = 1; // Helligkeit anpassen
 
 
     //Prüft, ob AR unterstützt wird
