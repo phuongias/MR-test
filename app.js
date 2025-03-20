@@ -39,13 +39,11 @@ const createScene = async function () {
     camera.setTarget(BABYLON.Vector3.Zero()); //richtet die Kamera auf den Ursprung (0,0,0) aus
     camera.attachControl(canvas, true); //ermöglicht die Steuerung der Kamera mit der Maus und Tastatur
 
-/*
 
 // *** LICHT HIER HINZUFÜGEN ***
     // HemisphericLight erstellen (ambientes Licht)
     var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1000, 5), scene);
-    light.intensity = 1; // Helligkeit anpassen
-*/
+    light.intensity = 0.5; // Helligkeit anpassen
 
 
     //Prüft, ob AR unterstützt wird
