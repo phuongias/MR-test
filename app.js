@@ -214,7 +214,7 @@ const createScene = async function () {
     //Virtuelle Welt laden -> Hill Valley
     engine.displayLoadingUI(); //Display the loading screen as the scene takes a few seconds to load
     const virtualWorldResult = await BABYLON.SceneLoader.ImportMeshAsync("", "./",
-        "babylontry1.glb", scene);
+        "try11.glb", scene);
     engine.hideLoadingUI(); //Hide Loadingscreen once the scene is loaded
     for (let child of virtualWorldResult.meshes) {
         child.renderingGroupId = 1;
@@ -302,22 +302,14 @@ const createScene = async function () {
             rootScene.position = portalPosition;
 
 
-            /*//Szene anpassen
+            //Szene anpassen
             //Move virtual scene 1 unit lower (this HillValley scene is at 1 above origin - and the grass at 1.2)
             rootScene.translate(BABYLON.Axis.Y, -1);
             //Positionate in front the car
             rootScene.translate(BABYLON.Axis.X, 29);
             rootScene.translate(BABYLON.Axis.Z, -11);
-*/
-            // Virtuelle Szene an der Portalposition ausrichten
-            rootScene.position = portalPosition.clone();
 
-// Rotation der Kamera übernehmen (damit die Szene in Blickrichtung erscheint)
-            rootScene.rotationQuaternion = xrCamera.rotationQuaternion.clone();
 
-// Szene 2 Meter in Blickrichtung verschieben (hinter das Portal)
-            const forwardDirection = xrCamera.getForwardRay().direction.scale(2);
-            rootScene.position.addInPlace(forwardDirection);
 
 
             //Align occluders
