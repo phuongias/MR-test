@@ -288,8 +288,12 @@ const createScene = async function () {
 
 
             //Virtuelle Welt und Occluder aktivieren ->
+            rootScene.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+            rootScene.position.y = 0.05;
+
             rootScene.setEnabled(true);
             rootOccluder.setEnabled(true);
+
 
 
             //und an die Position des Hittests verschieben
