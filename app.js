@@ -253,7 +253,7 @@ const createScene = async function () {
     //Virtuelle Welt laden -> Hill Valley
     engine.displayLoadingUI(); //Display the loading screen as the scene takes a few seconds to load
     const virtualWorldResult = await BABYLON.SceneLoader.ImportMeshAsync("", "./",
-        "firsttry.glb", scene);
+        "try2.glb", scene);
     engine.hideLoadingUI(); //Hide Loadingscreen once the scene is loaded
     for (let child of virtualWorldResult.meshes) {
         child.renderingGroupId = 1;
