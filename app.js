@@ -46,6 +46,11 @@ const createScene = async function () {
     light.intensity = 1; // Helligkeit anpassen
 
 
+    var light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(0, 1000, 5), scene);
+    light2.intensity = 1; // Helligkeit anpassen
+
+
+
     //Prüft, ob AR unterstützt wird
     const arAvailable = await BABYLON.WebXRSessionManager.IsSessionSupportedAsync('immersive-ar');
 
