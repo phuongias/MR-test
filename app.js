@@ -48,6 +48,18 @@ const createScene = async function () {
     //camera.setTarget(BABYLON.Vector3.Zero());
     camera.attachControl(canvas, true);
 
+
+    // *** LICHT HIER HINZUFÜGEN ***
+    // HemisphericLight erstellen (ambientes Licht)
+    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1000, 5), scene);
+    light.intensity = 1; // Helligkeit anpassen
+
+
+    var light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(0, 1000, 5), scene);
+    light2.intensity = 1; // Helligkeit anpassen
+
+
+
     // -----------------------------
     // Create GUI for non-AR mode and AR availability check
     // -----------------------------
