@@ -56,7 +56,7 @@ const createScene = async function () {
 
 
     var light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(0, 1000, 5), scene);
-    light2.intensity = 1; // Helligkeit anpassen
+    light2.intensity = 0.5; // Helligkeit anpassen
 
 
 
