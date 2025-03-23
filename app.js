@@ -76,7 +76,7 @@ const createScene = async function () {
         nonXRPanel.addControl(text1);
         return scene;
     } else {
-        text1.text = "WebXR Demo: AR Portal.\n\nEnter AR and look at the floor for a hit-test marker to appear. Then tap anywhere to begin placement.";
+        text1.text = "WebXR Demo: AR Portal.\n\nEnter AR and look at the floor for a hit-test marker to appear. Then Tap anywhere to begin placement.";
         nonXRPanel.addControl(text1);
     }
 
