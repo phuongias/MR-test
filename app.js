@@ -252,26 +252,25 @@ const createScene = async function () {
         }
     };
 
+    const anleitungsUi = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("anleitungsUi");
 
 // Erstelle einen Textblock, der als Hinweis dient (unsichtbar, bis die Bedingung erfüllt wird)
     const anleitungsText = new BABYLON.GUI.TextBlock("anleitungsText");
     anleitungsText.color = "red";
     anleitungsText.fontSize = 48;
     anleitungsText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    anleitungsText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
     anleitungsText.isVisible = false;  // zunächst sichtbar
-    ui.addControl(anleitungsText);
-
+    anleitungsUi.addControl(anleitungsText);
 
 
     // Define instructions for each state
     const instructions = [
         "Tap to place the reticle.",
-        "Adjust the reticle height.",
-        "Scale the reticle in Y direction.",
-        "Adjust the reticle height again.",
-        "Scale the reticle in X direction.",
-        "Rotate the reticle around Y axis."
+        "Adjust the reticle height by rotating the  joystick up and down.",
+        "Scale the reticle in Y direction by rotating the joystick up and down.",
+        "Adjust the reticle height again by rotating the joystick up and down.",
+        "Scale the reticle in X direction by rotating the joystick up and down.",
+        "Rotate the reticle around Y axis by rotating the joystick left and right.",
     ];
 
 
@@ -281,11 +280,8 @@ const createScene = async function () {
     // -----------------------------
     scene.onBeforeRenderObservable.add(() => {
 
-        // Update the instruction text based on the current state
-        if (state > 0) {
             anleitungsText.isVisible = true;
             anleitungsText.text = instructions[state];
-        }
 
         // Process gamepad input only if reticle exists and portal is not activated
         if (xr.baseExperience && xr.baseExperience.sessionManager.session && reticleMesh && state < 6) {
@@ -359,7 +355,7 @@ const createScene = async function () {
 
 
 //UI
-        /*const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");*/
+        const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
    // Erstelle einen Textblock, der als Hinweis dient (unsichtbar, bis die Bedingung erfüllt wird)
         const warningText = new BABYLON.GUI.TextBlock("warningText", "Portal Durchquert!");
