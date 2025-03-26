@@ -259,13 +259,16 @@ const createScene = async function () {
     anleitungsText.color = "red";
     anleitungsText.fontSize = 48;
     anleitungsText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    anleitungsText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER
+    anleitungsText.width = "100%";
+    anleitungsText.height = "100%";
     anleitungsText.isVisible = false;  // zunächst sichtbar
     anleitungsUi.addControl(anleitungsText);
 
 
     // Define instructions for each state
     const instructions = [
-        "Tap to place the reticle.",
+
         "Adjust the reticle height by rotating the  joystick up and down.",
         "Scale the reticle in Y direction by rotating the joystick up and down.",
         "Adjust the reticle height again by rotating the joystick up and down.",
@@ -280,8 +283,10 @@ const createScene = async function () {
     // -----------------------------
     scene.onBeforeRenderObservable.add(() => {
 
+        if(state > 0) {
             anleitungsText.isVisible = true;
             anleitungsText.text = instructions[state];
+        }
 
         // Process gamepad input only if reticle exists and portal is not activated
         if (xr.baseExperience && xr.baseExperience.sessionManager.session && reticleMesh && state < 6) {
