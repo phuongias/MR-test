@@ -60,6 +60,7 @@ const createScene = async function () {
 
 
 
+
     // -----------------------------
     // Create GUI for non-AR mode and AR availability check
     // -----------------------------
@@ -82,6 +83,10 @@ const createScene = async function () {
     text1.height = "400px";
     text1.paddingLeft = "10px";
     text1.paddingRight = "10px";
+
+    //für texthinweise in AR
+    const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
 
     if (!arAvailable) {
         text1.text = "AR is not available in your system. Please use a supported device (e.g., Meta Quest 3 or modern Android) and browser (e.g., Chrome).";
@@ -206,18 +211,7 @@ const createScene = async function () {
         }
     }
 
-    // Erstelle eine einfache GUI
-    const hinweisUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
-// Erstelle ein Text-Element
-    const hinweisText = new BABYLON.GUI.TextBlock();
-    hinweisText.text = "Verwende den Joystick, um das Reticle zu skalieren oder zu bewegen.";
-    hinweisText.color = "white";
-    hinweisText.fontSize = 24;
-    hinweisText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    hinweisText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-    hinweisText.top = "10px";
-    hinweisUI.addControl(hinweisText);
 
 
 
@@ -259,14 +253,40 @@ const createScene = async function () {
     };
 
 
+// Erstelle einen Textblock, der als Hinweis dient (unsichtbar, bis die Bedingung erfüllt wird)
+    const anleitungsText = new BABYLON.GUI.TextBlock("anleitungsText");
+    anleitungsText.color = "red";
+    anleitungsText.fontSize = 48;
+    anleitungsText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    anleitungsText.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    anleitungsText.isVisible = false;  // zunächst sichtbar
+    ui.addControl(anleitungsText);
 
 
 
+    // Define instructions for each state
+    const instructions = [
+        "Tap to place the reticle.",
+        "Adjust the reticle height.",
+        "Scale the reticle in Y direction.",
+        "Adjust the reticle height again.",
+        "Scale the reticle in X direction.",
+        "Rotate the reticle around Y axis."
+    ];
 
-    // -----------------------------
+
+
+        // -----------------------------
     // Gamepad Input Handling for Reticle Adjustments
     // -----------------------------
     scene.onBeforeRenderObservable.add(() => {
+
+        // Update the instruction text based on the current state
+        if (state > 0) {
+            anleitungsText.isVisible = true;
+            anleitungsText.text = instructions[state];
+        }
+
         // Process gamepad input only if reticle exists and portal is not activated
         if (xr.baseExperience && xr.baseExperience.sessionManager.session && reticleMesh && state < 6) {
             const xrSession = xr.baseExperience.sessionManager.session;
@@ -276,12 +296,10 @@ const createScene = async function () {
                     //const xAxis = gamepad.axes[2];  // Horizontal axis (e.g., for rotation)
                     const yAxis = gamepad.axes[3];  // Vertical axis (e.g., for height/scale)
 
-
                     if (state === 1) {
                         // Reticle-Höhe (Y-Position)
                         reticleMesh.position.y += yAxis * 0.01;
                         gamepad.axes[2] = 0;
-                        hinweisText.text = "Anpassen der Höhe des Reticles.";
 
 
                     } else if (state === 2) {
@@ -289,27 +307,23 @@ const createScene = async function () {
                         const scaley = Math.max(0.1, reticleMesh.scaling.y + yAxis * 0.01);
                         reticleMesh.scaling.y = scaley; // Nur Y-Achse ändern
                         gamepad.axes[2] = 0;
-                        hinweisText.text = "Skalieren des Reticles entlang der Y-Achse.";
 
                     } else if (state === 3) {
                         // Noch mal Höhe
                         reticleMesh.position.y += yAxis * 0.01;
                         gamepad.axes[2] = 0;
-                        hinweisText.text = "Erneutes Anpassen der Höhe des Reticles.";
 
                     } else if (state === 4) {
                         // Skalierung in X-Richtung
                         const scalex = Math.max(0.1, reticleMesh.scaling.x + yAxis * 0.01);
                         reticleMesh.scaling.x = scalex; // Nur X-Achse ändern
                         gamepad.axes[2] = 0;
-                        hinweisText.text = "Skalieren des Reticles entlang der X-Achse.";
 
                     } else if (state === 5) {
                         // Rotation um Y-Achse
                         let deltaRotation = BABYLON.Quaternion.RotationYawPitchRoll(yAxis * 0.005, 0, 0);
                         reticleMesh.rotationQuaternion = deltaRotation.multiply(reticleMesh.rotationQuaternion);
                         gamepad.axes[2] = 0;
-                        hinweisText.text = "Drehen des Reticles um die Y-Achse.";
                     }
 
                 }
@@ -345,7 +359,7 @@ const createScene = async function () {
 
 
 //UI
-        const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        /*const ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");*/
 
    // Erstelle einen Textblock, der als Hinweis dient (unsichtbar, bis die Bedingung erfüllt wird)
         const warningText = new BABYLON.GUI.TextBlock("warningText", "Portal Durchquert!");
